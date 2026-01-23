@@ -170,6 +170,14 @@ df_push = df_long[df_long['Category'] == 'Push'].reset_index(drop=True)
 # df_push = df_push.reset_index(drop=True)
 print("DF Push: \n", df_push.head())
 
+df_push["Exercise"] = (
+    df_push["Exercise"]
+    .astype(str)
+    .str.strip()
+)
+
+df_push = df_push.dropna(subset=["Exercise", "Date", "Weight"])
+
 print(f"\nPush exercises found: {len(df_push)}")
 print(f"Push exercise names: {df_push['Exercise'].unique()}")
 
