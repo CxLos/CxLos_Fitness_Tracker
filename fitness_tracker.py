@@ -41,19 +41,22 @@ scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis
 encoded_key = os.getenv("GOOGLE_CREDENTIALS")
 
 if encoded_key:
-    try:
-        # Try to parse as JSON first (if already decoded)
-        json_key = json.loads(encoded_key)
-    except json.JSONDecodeError:
-        # If that fails, try base64 decoding
-        json_key = json.loads(base64.b64decode(encoded_key).decode("utf-8"))
+    # Render: GOOGLE_CREDENTIALS is BASE64 ENCODED JSON
+    json_key = json.loads(
+        base64.b64decode(encoded_key).decode("utf-8")
+    )
     creds = Credentials.from_service_account_info(json_key, scopes=scope)
+
 else:
+    # Local development fallback
     creds_path = r"C:\Users\CxLos\OneDrive\Documents\Portfolio Projects\GCP\personal-projects-485203-6f6c61641541.json"
-    if os.path.exists(creds_path):
-        creds = Credentials.from_service_account_file(creds_path, scopes=scope)
-    else:
-        raise FileNotFoundError("Service account JSON file not found and GOOGLE_CREDENTIALS is not set.")
+
+    if not os.path.exists(creds_path):
+        raise FileNotFoundError(
+            "Service account JSON file not found and GOOGLE_CREDENTIALS is not set."
+        )
+
+    creds = Credentials.from_service_account_file(creds_path, scopes=scope)
 
 # Authorize and load the sheet
 client = gspread.authorize(creds)
@@ -144,7 +147,7 @@ total_exercises = len(df)
 
 # ========================= Push Exercises =========================== #
 
-# Filter for Bench Press only
+# Filter for Push category
 df_push = df_long[df_long['Category'] == 'Push']
 
 push_line = px.line(
@@ -764,24 +767,5 @@ if __name__ == '__main__':
 # Set buildpack for heroku
 # heroku buildpacks:set heroku/python
 
-# Heatmap Colorscale colors -----------------------------------------------------------------------------
-
-#   ['aggrnyl', 'agsunset', 'algae', 'amp', 'armyrose', 'balance',
-            #  'blackbody', 'bluered', 'blues', 'blugrn', 'bluyl', 'brbg',
-            #  'brwnyl', 'bugn', 'bupu', 'burg', 'burgyl', 'cividis', 'curl',
-            #  'darkmint', 'deep', 'delta', 'dense', 'earth', 'edge', 'electric',
-            #  'emrld', 'fall', 'geyser', 'gnbu', 'gray', 'greens', 'greys',
-            #  'haline', 'hot', 'hsv', 'ice', 'icefire', 'inferno', 'jet',
-            #  'magenta', 'magma', 'matter', 'mint', 'mrybm', 'mygbm', 'oranges',
-            #  'orrd', 'oryel', 'oxy', 'peach', 'phase', 'picnic', 'pinkyl',
-            #  'piyg', 'plasma', 'plotly3', 'portland', 'prgn', 'pubu', 'pubugn',
-            #  'puor', 'purd', 'purp', 'purples', 'purpor', 'rainbow', 'rdbu',
-            #  'rdgy', 'rdpu', 'rdylbu', 'rdylgn', 'redor', 'reds', 'solar',
-            #  'spectral', 'speed', 'sunset', 'sunsetdark', 'teal', 'tealgrn',
-            #  'tealrose', 'tempo', 'temps', 'thermal', 'tropic', 'turbid',
-            #  'turbo', 'twilight', 'viridis', 'ylgn', 'ylgnbu', 'ylorbr',
-            #  'ylorrd'].
-
-# rm -rf ~$bmhc_data_2024_cleaned.xlsx
-# rm -rf ~$bmhc_data_2024.xlsx
-# rm -rf ~$bmhc_q4_2024_cleaned2.xlsx
+# Get encoded key:
+# base64 service_account_file.json

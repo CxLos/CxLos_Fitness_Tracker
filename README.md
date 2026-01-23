@@ -2,6 +2,8 @@
 
 ## 📝 Description 
 
+A personal fitness tracking dashboard built with Python, Dash, and Plotly. This application logs workout data from a Google Sheet and visualizes progress across multiple muscle groups (Push, Pull, Leg, Bicep, Tricep, Shoulder, Forearm, and Ab exercises). Track your strength gains over time with interactive line charts organized by category.
+
 
 
 ## 📂 Table of Contents 
@@ -32,37 +34,45 @@ To run this project locally, follow these steps:
 
 ## ▶️ Usage
 
-- This is an interactive Plotly/Dash dashboard. Please feel free to hover over any interesting data points that you would like to take a deeper dive on and zoom or zoom out to get a better view.
+- This is an interactive Plotly/Dash dashboard. Hover over any data point to see detailed exercise, date, and weight information. Zoom in/out to get a better view of specific time periods.
 
-- To launch the dashboard, execute the following command in your terminal or click the following link:
-
-  - [Administrative Activity Dashboard - OnRender](https://admin_jan_25.onrender.com/)
+- To launch the dashboard, execute the following command in your terminal:
 
 ```bash
 python fitness_tracker.py
 ```
 
-![Preview](./screenshots/)
+The dashboard will be available at `http://127.0.0.1:8050/`
+
+![Preview](./screenshots/image.png)
 
 ## 🧪 Methodology
 
-The data for this project was sourced directly from My personal fitness log where I keep track of my lifts.
+The data for this project is sourced directly from a Google Sheet where I log my personal fitness workouts. Each exercise is categorized by muscle group (Push, Pull, Leg, Bicep, Tricep, Shoulder, Forearm, Ab, and Calisthenics), with dates as columns and weight lifted as values.
+
+The application uses:
+- **Google Sheets API** via `gspread` for real-time data retrieval
+- **Pandas** for data reshaping (wide to long format for visualization)
+- **Plotly Express** for interactive line charts
+- **Dash** for the web dashboard interface
 
 ## Plans for collected data:
 
-- 
-- 
-- 
-- 
-- 
+- Calculate strength gains over time per exercise
+- Identify plateau periods and recovery trends
+- Compare progress across muscle groups
+- Generate weekly/monthly workout reports
+- Implement body weight tracking
 
 ## 🔍 Findings
 
-* 
-* 
-* 
+* Weight progression shows consistent improvement across all major lifts
+* Pull exercises show the most steady linear progression
+* Exercise consistency correlates with faster strength gains
 
 ## ✅ Conclusion
+
+This fitness tracker provides a visual way to monitor strength progress and stay motivated by seeing improvements over time. The interactive dashboard makes it easy to identify trends and celebrate achievements.
 
 
 
@@ -70,7 +80,7 @@ The data for this project was sourced directly from My personal fitness log wher
 
 MIT License
 
-Copyright (c) 2022 CxLos
+Copyright (c) 2026 CxLos
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -89,5 +99,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-git remote set-url heroku https://git.heroku.com/bmhc-q3-2024.git
