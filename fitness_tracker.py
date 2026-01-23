@@ -139,11 +139,14 @@ df_long = df_long[df_long['Weight'].notna()]
 df_long = df_long[df_long['Weight'] != '']  # Remove empty strings
 
 # Strip whitespace from string columns
-df_long['Category'] = df_long['Category'].str.strip()
-df_long['Exercise'] = df_long['Exercise'].str.strip()
+df_long['Category'] = df_long['Category'].astype(str).str.strip()
+df_long['Exercise'] = df_long['Exercise'].astype(str).str.strip()
 
 # Remove duplicate rows (same exercise on same date)
 df_long = df_long.drop_duplicates(subset=['Category', 'Exercise', 'Date'], keep='first')
+
+# Reset index to avoid grouping issues in Plotly
+df_long = df_long.reset_index(drop=True)
 
 print("Melted DataFrame: \n", df_long.head(10))
 
@@ -154,8 +157,8 @@ total_exercises = len(df)
 
 # ========================= Push Exercises =========================== #
 
-# Filter for Push category
-df_push = df_long[df_long['Category'] == 'Push']
+# Filter for Push category and reset index
+df_push = df_long[df_long['Category'] == 'Push'].reset_index(drop=True)
 
 push_line = px.line(
     df_push,
@@ -183,8 +186,8 @@ push_line = px.line(
 
 # ========================= Pull Exercises =========================== #
 
-# Filter for Pull category
-df_pull = df_long[df_long['Category'] == 'Pull']
+# Filter for Pull category and reset index
+df_pull = df_long[df_long['Category'] == 'Pull'].reset_index(drop=True)
 
 pull_line = px.line(
     df_pull,
@@ -212,8 +215,8 @@ pull_line = px.line(
 
 # ========================= Leg Exercises =========================== #
 
-# Filter for Leg category
-df_leg = df_long[df_long['Category'] == 'Leg']
+# Filter for Leg category and reset index
+df_leg = df_long[df_long['Category'] == 'Leg'].reset_index(drop=True)
 
 leg_line = px.line(
     df_leg,
@@ -241,8 +244,8 @@ leg_line = px.line(
 
 # ========================= Bicep Exercises =========================== #
 
-# Filter for Bicep category
-df_bicep = df_long[df_long['Category'] == 'Bicep']
+# Filter for Bicep category and reset index
+df_bicep = df_long[df_long['Category'] == 'Bicep'].reset_index(drop=True)
 
 bicep_line = px.line(
     df_bicep,
@@ -270,8 +273,8 @@ bicep_line = px.line(
 
 # ========================= Tricep Exercises =========================== #
 
-# Filter for Tricep category
-df_tricep = df_long[df_long['Category'] == 'Tricep']
+# Filter for Tricep category and reset index
+df_tricep = df_long[df_long['Category'] == 'Tricep'].reset_index(drop=True)
 
 tricep_line = px.line(
     df_tricep,
@@ -299,8 +302,8 @@ tricep_line = px.line(
 
 # ========================= Shoulder Exercises =========================== #
 
-# Filter for Shoulder category
-df_shoulder = df_long[df_long['Category'] == 'Shoulder']
+# Filter for Shoulder category and reset index
+df_shoulder = df_long[df_long['Category'] == 'Shoulder'].reset_index(drop=True)
 
 shoulder_line = px.line(
     df_shoulder,
@@ -328,8 +331,8 @@ shoulder_line = px.line(
 
 # ========================= Forearm Exercises =========================== #
 
-# Filter for Forearm category
-df_forearm = df_long[df_long['Category'] == 'Forearm']
+# Filter for Forearm category and reset index
+df_forearm = df_long[df_long['Category'] == 'Forearm'].reset_index(drop=True)
 
 forearm_line = px.line(
     df_forearm,
@@ -357,8 +360,8 @@ forearm_line = px.line(
 
 # ========================= Ab Exercises =========================== #
 
-# Filter for Ab category
-df_ab = df_long[df_long['Category'] == 'Ab']
+# Filter for Ab category and reset index
+df_ab = df_long[df_long['Category'] == 'Ab'].reset_index(drop=True)
 
 ab_line = px.line(
     df_ab,
@@ -386,8 +389,8 @@ ab_line = px.line(
 
 # ========================= Calisthenics Exercises =========================== #
 
-# Filter for Calisthenics category
-df_calisthenics = df_long[df_long['Category'] == 'Calisthenics']
+# Filter for Calisthenics category and reset index
+df_calisthenics = df_long[df_long['Category'] == 'Calisthenics'].reset_index(drop=True)
 
 calisthenics_line = px.line(
     df_calisthenics,
