@@ -138,7 +138,7 @@ df_long = df_long.dropna(subset=['Weight'])
 df_long = df_long[df_long['Weight'].notna()]
 df_long = df_long[df_long['Weight'] != '']  # Remove empty strings
 
-# Strip whitespace from string columns
+# Strip whitespace from string columns and convert to string type explicitly
 df_long['Category'] = df_long['Category'].astype(str).str.strip()
 df_long['Exercise'] = df_long['Exercise'].astype(str).str.strip()
 
@@ -148,7 +148,15 @@ df_long = df_long.drop_duplicates(subset=['Category', 'Exercise', 'Date'], keep=
 # Reset index to avoid grouping issues in Plotly
 df_long = df_long.reset_index(drop=True)
 
-print("Melted DataFrame: \n", df_long.head(10))
+# Ensure all columns have the correct explicit types for pandas 3.0 compatibility
+df_long['Category'] = df_long['Category'].astype('string')
+df_long['Exercise'] = df_long['Exercise'].astype('string')
+df_long['Date'] = pd.to_datetime(df_long['Date'])
+df_long['Weight'] = df_long['Weight'].astype('float64')
+
+# print("Melted DataFrame: \n", df_long.head(10))
+print("\nDataFrame dtypes:\n", df_long.dtypes)
+print("\nUnique exercises:\n", df_long['Exercise'].unique())
 
 # =========================== Total Exercises =========================== #
 
@@ -157,8 +165,12 @@ total_exercises = len(df)
 
 # ========================= Push Exercises =========================== #
 
-# Filter for Push category and reset index
-df_push = df_long[df_long['Category'] == 'Push'].reset_index(drop=True)
+# Filter for Push category and create explicit copy
+df_push = df_long[df_long['Category'] == 'Push'].copy()
+df_push = df_push.reset_index(drop=True)
+
+print(f"\nPush exercises found: {len(df_push)}")
+print(f"Push exercise names: {df_push['Exercise'].unique()}")
 
 push_line = px.line(
     df_push,
