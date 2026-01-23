@@ -3,6 +3,7 @@
 import numpy as np 
 import pandas as pd 
 import plotly.express as px
+import plotly.graph_objects as go
 import seaborn as sns 
 from datetime import datetime
 import os
@@ -158,6 +159,36 @@ df_long['Weight'] = df_long['Weight'].astype('float64')
 print("\nDataFrame dtypes:\n", df_long.dtypes)
 print("\nUnique exercises:\n", df_long['Exercise'].unique())
 
+# Helper to build line charts without relying on Plotly Express grouping
+def make_line_chart(df_cat: pd.DataFrame, title: str) -> go.Figure:
+    fig = go.Figure()
+
+    if df_cat.empty:
+        fig.update_layout(title=dict(text=title, x=0.5, xanchor='center', font=dict(size=20)))
+        return fig
+
+    for exercise_name, sub in df_cat.groupby('Exercise'):
+        sub_sorted = sub.sort_values('Date')
+        fig.add_trace(
+            go.Scatter(
+                x=sub_sorted['Date'],
+                y=sub_sorted['Weight'],
+                mode='lines+markers',
+                name=str(exercise_name),
+                hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
+            )
+        )
+
+    fig.update_layout(
+        title=dict(text=title, x=0.5, xanchor='center', font=dict(size=20)),
+        xaxis=dict(tickformat='%m/%d', title='Date'),
+        yaxis=dict(title='Weight (lbs)'),
+        hovermode='closest',
+        font=dict(size=12),
+    )
+
+    return fig
+
 # =========================== Total Exercises =========================== #
 
 total_exercises = len(df)
@@ -180,262 +211,63 @@ df_push = df_push.dropna(subset=["Exercise", "Date", "Weight"])
 
 print(f"\nPush exercises found: {len(df_push)}")
 print(f"Push exercise names: {df_push['Exercise'].unique()}")
-
-push_line = px.line(
-    df_push,
-    x='Date',
-    y='Weight',
-    color='Exercise', 
-    markers=True,
-    title='Push Progress Over Time',
-    labels={'Weight': 'Weight (lbs)', 'Date': 'Date'},
-).update_layout(
-    title=dict(
-        text='Push Progress Over Time',
-        x=0.5,
-        xanchor='center',
-        font=dict(size=20)
-    ),
-    xaxis=dict(
-        tickformat='%m/%d'
-    ),
-    hovermode='closest',
-    font=dict(size=12),
-).update_traces(
-    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
-)
+push_line = make_line_chart(df_push, 'Push Progress Over Time')
 
 # ========================= Pull Exercises =========================== #
 
 # Filter for Pull category and reset index
 df_pull = df_long[df_long['Category'] == 'Pull'].reset_index(drop=True)
 
-pull_line = px.line(
-    df_pull,
-    x='Date',
-    y='Weight',
-    color='Exercise',
-    markers=True,
-    title='Pull Progress Over Time',
-    labels={'Weight': 'Weight (lbs)', 'Date': 'Date'},
-).update_layout(
-    title=dict(
-        text='Pull Progress Over Time',
-        x=0.5,
-        xanchor='center',
-        font=dict(size=20)
-    ),
-    xaxis=dict(
-        tickformat='%m/%d'
-    ),
-    hovermode='closest',
-    font=dict(size=12),
-).update_traces(
-    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
-)
+pull_line = make_line_chart(df_pull, 'Pull Progress Over Time')
 
 # ========================= Leg Exercises =========================== #
 
 # Filter for Leg category and reset index
 df_leg = df_long[df_long['Category'] == 'Leg'].reset_index(drop=True)
 
-leg_line = px.line(
-    df_leg,
-    x='Date',
-    y='Weight',
-    color='Exercise',
-    markers=True,
-    title='Leg Progress Over Time',
-    labels={'Weight': 'Weight (lbs)', 'Date': 'Date'},
-).update_layout(
-    title=dict(
-        text='Leg Progress Over Time',
-        x=0.5,
-        xanchor='center',
-        font=dict(size=20)
-    ),
-    xaxis=dict(
-        tickformat='%m/%d'
-    ),
-    hovermode='closest',
-    font=dict(size=12),
-).update_traces(
-    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
-)
+leg_line = make_line_chart(df_leg, 'Leg Progress Over Time')
 
 # ========================= Bicep Exercises =========================== #
 
 # Filter for Bicep category and reset index
 df_bicep = df_long[df_long['Category'] == 'Bicep'].reset_index(drop=True)
 
-bicep_line = px.line(
-    df_bicep,
-    x='Date',
-    y='Weight',
-    color='Exercise',
-    markers=True,
-    title='Bicep Progress Over Time',
-    labels={'Weight': 'Weight (lbs)', 'Date': 'Date'},
-).update_layout(
-    title=dict(
-        text='Bicep Progress Over Time',
-        x=0.5,
-        xanchor='center',
-        font=dict(size=20)
-    ),
-    xaxis=dict(
-        tickformat='%m/%d'
-    ),
-    hovermode='closest',
-    font=dict(size=12),
-).update_traces(
-    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
-)
+bicep_line = make_line_chart(df_bicep, 'Bicep Progress Over Time')
 
 # ========================= Tricep Exercises =========================== #
 
 # Filter for Tricep category and reset index
 df_tricep = df_long[df_long['Category'] == 'Tricep'].reset_index(drop=True)
 
-tricep_line = px.line(
-    df_tricep,
-    x='Date',
-    y='Weight',
-    color='Exercise',
-    markers=True,
-    title='Tricep Progress Over Time',
-    labels={'Weight': 'Weight (lbs)', 'Date': 'Date'},
-).update_layout(
-    title=dict(
-        text='Tricep Progress Over Time',
-        x=0.5,
-        xanchor='center',
-        font=dict(size=20)
-    ),
-    xaxis=dict(
-        tickformat='%m/%d'
-    ),
-    hovermode='closest',
-    font=dict(size=12),
-).update_traces(
-    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
-)
+tricep_line = make_line_chart(df_tricep, 'Tricep Progress Over Time')
 
 # ========================= Shoulder Exercises =========================== #
 
 # Filter for Shoulder category and reset index
 df_shoulder = df_long[df_long['Category'] == 'Shoulder'].reset_index(drop=True)
 
-shoulder_line = px.line(
-    df_shoulder,
-    x='Date',
-    y='Weight',
-    color='Exercise',
-    markers=True,
-    title='Shoulder Progress Over Time',
-    labels={'Weight': 'Weight (lbs)', 'Date': 'Date'},
-).update_layout(
-    title=dict(
-        text='Shoulder Progress Over Time',
-        x=0.5,
-        xanchor='center',
-        font=dict(size=20)
-    ),
-    xaxis=dict(
-        tickformat='%m/%d'
-    ),
-    hovermode='closest',
-    font=dict(size=12),
-).update_traces(
-    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
-)
+shoulder_line = make_line_chart(df_shoulder, 'Shoulder Progress Over Time')
 
 # ========================= Forearm Exercises =========================== #
 
 # Filter for Forearm category and reset index
 df_forearm = df_long[df_long['Category'] == 'Forearm'].reset_index(drop=True)
 
-forearm_line = px.line(
-    df_forearm,
-    x='Date',
-    y='Weight',
-    color='Exercise',
-    markers=True,
-    title='Forearm Progress Over Time',
-    labels={'Weight': 'Weight (lbs)', 'Date': 'Date'},
-).update_layout(
-    title=dict(
-        text='Forearm Progress Over Time',
-        x=0.5,
-        xanchor='center',
-        font=dict(size=20)
-    ),
-    xaxis=dict(
-        tickformat='%m/%d'
-    ),
-    hovermode='closest',
-    font=dict(size=12),
-).update_traces(
-    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
-)
+forearm_line = make_line_chart(df_forearm, 'Forearm Progress Over Time')
 
 # ========================= Ab Exercises =========================== #
 
 # Filter for Ab category and reset index
 df_ab = df_long[df_long['Category'] == 'Ab'].reset_index(drop=True)
 
-ab_line = px.line(
-    df_ab,
-    x='Date',
-    y='Weight',
-    color='Exercise',
-    markers=True,
-    title='Ab Progress Over Time',
-    labels={'Weight': 'Weight (lbs)', 'Date': 'Date'},
-).update_layout(
-    title=dict(
-        text='Ab Progress Over Time',
-        x=0.5,
-        xanchor='center',
-        font=dict(size=20)
-    ),
-    xaxis=dict(
-        tickformat='%m/%d'
-    ),
-    hovermode='closest',
-    font=dict(size=12),
-).update_traces(
-    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
-)
+ab_line = make_line_chart(df_ab, 'Ab Progress Over Time')
 
 # ========================= Calisthenics Exercises =========================== #
 
 # Filter for Calisthenics category and reset index
 df_calisthenics = df_long[df_long['Category'] == 'Calisthenics'].reset_index(drop=True)
 
-calisthenics_line = px.line(
-    df_calisthenics,
-    x='Date',
-    y='Weight',
-    color='Exercise',
-    markers=True,
-    title='Calisthenics Progress Over Time',
-    labels={'Weight': 'Weight (lbs)', 'Date': 'Date'},
-).update_layout(
-    title=dict(
-        text='Calisthenics Progress Over Time',
-        x=0.5,
-        xanchor='center',
-        font=dict(size=20)
-    ),
-    xaxis=dict(
-        tickformat='%m/%d'
-    ),
-    hovermode='closest',
-    font=dict(size=12),
-).update_traces(
-    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
-)
+calisthenics_line = make_line_chart(df_calisthenics, 'Calisthenics Progress Over Time')
 
 # =========================  Exercises =========================== #
 
