@@ -149,8 +149,8 @@ df_long = df_long.drop_duplicates(subset=['Category', 'Exercise', 'Date'], keep=
 df_long = df_long.reset_index(drop=True)
 
 # Ensure all columns have the correct explicit types for pandas 3.0 compatibility
-df_long['Category'] = df_long['Category'].astype('string')
-df_long['Exercise'] = df_long['Exercise'].astype('string')
+df_long['Category'] = df_long['Category'].astype('object')
+df_long['Exercise'] = df_long['Exercise'].astype('object')
 df_long['Date'] = pd.to_datetime(df_long['Date'])
 df_long['Weight'] = df_long['Weight'].astype('float64')
 
@@ -166,8 +166,9 @@ total_exercises = len(df)
 # ========================= Push Exercises =========================== #
 
 # Filter for Push category and create explicit copy
-df_push = df_long[df_long['Category'] == 'Push'].copy()
-df_push = df_push.reset_index(drop=True)
+df_push = df_long[df_long['Category'] == 'Push'].reset_index(drop=True)
+# df_push = df_push.reset_index(drop=True)
+print("DF Push: \n", df_push.head())
 
 print(f"\nPush exercises found: {len(df_push)}")
 print(f"Push exercise names: {df_push['Exercise'].unique()}")
