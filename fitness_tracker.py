@@ -41,7 +41,12 @@ scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis
 encoded_key = os.getenv("GOOGLE_CREDENTIALS")
 
 if encoded_key:
-    json_key = json.loads(base64.b64decode(encoded_key).decode("utf-8"))
+    try:
+        # Try to parse as JSON first (if already decoded)
+        json_key = json.loads(encoded_key)
+    except json.JSONDecodeError:
+        # If that fails, try base64 decoding
+        json_key = json.loads(base64.b64decode(encoded_key).decode("utf-8"))
     creds = Credentials.from_service_account_info(json_key, scopes=scope)
 else:
     creds_path = r"C:\Users\CxLos\OneDrive\Documents\Portfolio Projects\GCP\personal-projects-485203-6f6c61641541.json"
@@ -163,7 +168,7 @@ push_line = px.line(
     hovermode='closest',
     font=dict(size=12),
 ).update_traces(
-    hovertemplate='<b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
+    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
 )
 
 # ========================= Pull Exercises =========================== #
@@ -192,7 +197,7 @@ pull_line = px.line(
     hovermode='closest',
     font=dict(size=12),
 ).update_traces(
-    hovertemplate='<b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
+    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
 )
 
 # ========================= Leg Exercises =========================== #
@@ -221,30 +226,182 @@ leg_line = px.line(
     hovermode='closest',
     font=dict(size=12),
 ).update_traces(
-    hovertemplate='<b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
+    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
 )
 
 # ========================= Bicep Exercises =========================== #
 
+# Filter for Bicep category
+df_bicep = df_long[df_long['Category'] == 'Bicep']
 
+bicep_line = px.line(
+    df_bicep,
+    x='Date',
+    y='Weight',
+    color='Exercise',
+    markers=True,
+    title='Bicep Progress Over Time',
+    labels={'Weight': 'Weight (lbs)', 'Date': 'Date'},
+).update_layout(
+    title=dict(
+        text='Bicep Progress Over Time',
+        x=0.5,
+        xanchor='center',
+        font=dict(size=20)
+    ),
+    xaxis=dict(
+        tickformat='%m/%d'
+    ),
+    hovermode='closest',
+    font=dict(size=12),
+).update_traces(
+    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
+)
 
 # ========================= Tricep Exercises =========================== #
 
+# Filter for Tricep category
+df_tricep = df_long[df_long['Category'] == 'Tricep']
 
+tricep_line = px.line(
+    df_tricep,
+    x='Date',
+    y='Weight',
+    color='Exercise',
+    markers=True,
+    title='Tricep Progress Over Time',
+    labels={'Weight': 'Weight (lbs)', 'Date': 'Date'},
+).update_layout(
+    title=dict(
+        text='Tricep Progress Over Time',
+        x=0.5,
+        xanchor='center',
+        font=dict(size=20)
+    ),
+    xaxis=dict(
+        tickformat='%m/%d'
+    ),
+    hovermode='closest',
+    font=dict(size=12),
+).update_traces(
+    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
+)
 
 # ========================= Shoulder Exercises =========================== #
 
+# Filter for Shoulder category
+df_shoulder = df_long[df_long['Category'] == 'Shoulder']
 
+shoulder_line = px.line(
+    df_shoulder,
+    x='Date',
+    y='Weight',
+    color='Exercise',
+    markers=True,
+    title='Shoulder Progress Over Time',
+    labels={'Weight': 'Weight (lbs)', 'Date': 'Date'},
+).update_layout(
+    title=dict(
+        text='Shoulder Progress Over Time',
+        x=0.5,
+        xanchor='center',
+        font=dict(size=20)
+    ),
+    xaxis=dict(
+        tickformat='%m/%d'
+    ),
+    hovermode='closest',
+    font=dict(size=12),
+).update_traces(
+    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
+)
 
 # ========================= Forearm Exercises =========================== #
 
+# Filter for Forearm category
+df_forearm = df_long[df_long['Category'] == 'Forearm']
 
+forearm_line = px.line(
+    df_forearm,
+    x='Date',
+    y='Weight',
+    color='Exercise',
+    markers=True,
+    title='Forearm Progress Over Time',
+    labels={'Weight': 'Weight (lbs)', 'Date': 'Date'},
+).update_layout(
+    title=dict(
+        text='Forearm Progress Over Time',
+        x=0.5,
+        xanchor='center',
+        font=dict(size=20)
+    ),
+    xaxis=dict(
+        tickformat='%m/%d'
+    ),
+    hovermode='closest',
+    font=dict(size=12),
+).update_traces(
+    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
+)
 
 # ========================= Ab Exercises =========================== #
 
+# Filter for Ab category
+df_ab = df_long[df_long['Category'] == 'Ab']
 
+ab_line = px.line(
+    df_ab,
+    x='Date',
+    y='Weight',
+    color='Exercise',
+    markers=True,
+    title='Ab Progress Over Time',
+    labels={'Weight': 'Weight (lbs)', 'Date': 'Date'},
+).update_layout(
+    title=dict(
+        text='Ab Progress Over Time',
+        x=0.5,
+        xanchor='center',
+        font=dict(size=20)
+    ),
+    xaxis=dict(
+        tickformat='%m/%d'
+    ),
+    hovermode='closest',
+    font=dict(size=12),
+).update_traces(
+    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
+)
 
-# =========================  Exercises =========================== #
+# ========================= Calisthenics Exercises =========================== #
+
+# Filter for Calisthenics category
+df_calisthenics = df_long[df_long['Category'] == 'Calisthenics']
+
+calisthenics_line = px.line(
+    df_calisthenics,
+    x='Date',
+    y='Weight',
+    color='Exercise',
+    markers=True,
+    title='Calisthenics Progress Over Time',
+    labels={'Weight': 'Weight (lbs)', 'Date': 'Date'},
+).update_layout(
+    title=dict(
+        text='Calisthenics Progress Over Time',
+        x=0.5,
+        xanchor='center',
+        font=dict(size=20)
+    ),
+    xaxis=dict(
+        tickformat='%m/%d'
+    ),
+    hovermode='closest',
+    font=dict(size=12),
+).update_traces(
+    hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
+)
 
 # =========================  Exercises =========================== #
 
@@ -253,6 +410,11 @@ leg_line = px.line(
 # create a display index column and prepare table data/columns
 # reset index to ensure contiguous numbering after any filtering/sorting upstream
 df_indexed = df_long.reset_index(drop=True).copy()
+
+# Reorder columns: Date first, then the rest
+column_order = ['Date', 'Category', 'Exercise', 'Weight']
+df_indexed = df_indexed[column_order]
+
 # Insert '#' as the first column (1-based row numbers)
 df_indexed.insert(0, '#', df_indexed.index + 1)
 
@@ -273,6 +435,9 @@ app.layout = html.Div(
                 html.H1(
                     f'CxLos Fitness Tracker',  
                     className='title'),
+                html.H1(
+                    f'{report_year}', 
+                    className='title2'),
                 html.Div(
                     className='btn-box', 
                     children=[
@@ -416,7 +581,7 @@ html.Div(
                     children=[
                         dcc.Graph(
                             className='wide-graph',
-                            # figure=bicep_line
+                            figure=bicep_line
                         )
                     ]
                 ),
@@ -431,7 +596,7 @@ html.Div(
                     children=[
                         dcc.Graph(
                             className='wide-graph',
-                            # figure=tricep_line
+                            figure=tricep_line
                         )
                     ]
                 ),
@@ -446,7 +611,37 @@ html.Div(
                     children=[
                         dcc.Graph(
                             className='wide-graph',
-                            # figure=shoulder_line
+                            figure=shoulder_line
+                        )
+                    ]
+                ),
+            ]
+        ),
+        
+        html.Div(
+            className='graph-row',
+            children=[
+                html.Div(
+                    className='wide-box',
+                    children=[
+                        dcc.Graph(
+                            className='wide-graph',
+                            figure=ab_line
+                        )
+                    ]
+                ),
+            ]
+        ),
+        
+        html.Div(
+            className='graph-row',
+            children=[
+                html.Div(
+                    className='wide-box',
+                    children=[
+                        dcc.Graph(
+                            className='wide-graph',
+                            figure=calisthenics_line
                         )
                     ]
                 ),
@@ -469,7 +664,7 @@ html.Div(
                 id='applications-table',
                 data=data, # type: ignore
                 columns=columns, # type: ignore
-                page_size=10,
+                page_size=20,
                 sort_action='native',
                 filter_action='native',
                 row_selectable='multi',
