@@ -138,6 +138,13 @@ df_long = df_long.dropna(subset=['Weight'])
 df_long = df_long[df_long['Weight'].notna()]
 df_long = df_long[df_long['Weight'] != '']  # Remove empty strings
 
+# Strip whitespace from string columns
+df_long['Category'] = df_long['Category'].str.strip()
+df_long['Exercise'] = df_long['Exercise'].str.strip()
+
+# Remove duplicate rows (same exercise on same date)
+df_long = df_long.drop_duplicates(subset=['Category', 'Exercise', 'Date'], keep='first')
+
 print("Melted DataFrame: \n", df_long.head(10))
 
 # =========================== Total Exercises =========================== #
