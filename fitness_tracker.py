@@ -62,17 +62,39 @@ else:
 # Authorize and load the sheet
 client = gspread.authorize(creds)
 sheet = client.open_by_url(sheet_url)
-worksheet = sheet.worksheet(f"{report_year}")
-data = pd.DataFrame(worksheet.get_all_records())
-raw_data = worksheet.get_all_records() 
-# data = pd.DataFrame(raw_data)
 
-# Debug: Print raw data from Google Sheets
-# print("Raw data from gspread:")
-# print(f"First row: {raw_data[0]}")
-# print(f"Bench Press row: {[row for row in raw_data if 'Bench' in row.get('Exercise', '')][:1]}")
+# ============================== Data Loading Function ========================== #
 
-df = data.copy()
+def load_data_for_year(year):
+    """Load and process fitness data for a specific year or all years"""
+    if year == 'All Time':
+        # Load and combine all years
+        all_years = ['2026']
+        dfs = []
+        for yr in all_years:
+            try:
+                worksheet = sheet.worksheet(f"{yr}")
+                data = pd.DataFrame(worksheet.get_all_records())
+                dfs.append(data)
+            except:
+                # Skip if worksheet doesn't exist
+                print(f"Worksheet {yr} not found, skipping...")
+                continue
+        
+        if dfs:
+            # Combine all dataframes
+            combined_df = pd.concat(dfs, ignore_index=True)
+            return combined_df.copy()
+        else:
+            # Return empty dataframe if no data found
+            return pd.DataFrame()
+    else:
+        worksheet = sheet.worksheet(f"{year}")
+        data = pd.DataFrame(worksheet.get_all_records())
+        return data.copy()
+
+# Load default year (All Time)
+df = load_data_for_year('All Time')
 
 # -------------------------------------------------
 # print(df.head())
@@ -125,8 +147,15 @@ df_long = df.melt(
     value_name='Weight'     # New column name for cell values
 )
 
-# Convert Date to datetime
-df_long['Date'] = pd.to_datetime(df_long['Date'])
+# Filter out invalid date strings before converting
+# Remove rows where Date contains common non-date values
+df_long = df_long[~df_long['Date'].astype(str).str.contains('Int\.|Unnamed|#', case=False, na=False)]
+
+# Convert Date to datetime with format specification
+df_long['Date'] = pd.to_datetime(df_long['Date'], errors='coerce', format='mixed')
+
+# Remove rows with invalid dates (NaT)
+df_long = df_long.dropna(subset=['Date'])
 
 # Sort by date
 df_long = df_long.sort_values('Date')
@@ -155,9 +184,9 @@ df_long['Exercise'] = df_long['Exercise'].astype('object')
 df_long['Date'] = pd.to_datetime(df_long['Date'])
 df_long['Weight'] = df_long['Weight'].astype('float64')
 
-# print("Melted DataFrame: \n", df_long.head(10))
-print("\nDataFrame dtypes:\n", df_long.dtypes)
-print("\nUnique exercises:\n", df_long['Exercise'].unique())
+print("Melted DataFrame: \n", df_long.head(10))
+# print("\nDataFrame dtypes:\n", df_long.dtypes)
+# print("\nUnique exercises:\n", df_long['Exercise'].unique())
 
 # Helper to build line charts without relying on Plotly Express grouping
 def make_line_chart(df_cat: pd.DataFrame, title: str) -> go.Figure:
@@ -168,6 +197,8 @@ def make_line_chart(df_cat: pd.DataFrame, title: str) -> go.Figure:
         return fig
 
     for exercise_name, sub in df_cat.groupby('Exercise'):
+        # print("exercise_name:", exercise_name)
+        # print(sub.head(), "\n")
         sub_sorted = sub.sort_values('Date')
         fig.add_trace(
             go.Scatter(
@@ -175,23 +206,31 @@ def make_line_chart(df_cat: pd.DataFrame, title: str) -> go.Figure:
                 y=sub_sorted['Weight'],
                 mode='lines+markers',
                 name=str(exercise_name),
-                hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
+                hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d/%Y}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
             )
         )
 
     fig.update_layout(
         title=dict(text=title, x=0.5, xanchor='center', font=dict(size=20)),
-        xaxis=dict(tickformat='%m/%d', title='Date'),
+        xaxis=dict(tickformat='%m/%d/%Y', title='Date'),
         yaxis=dict(title='Weight (lbs)'),
         hovermode='closest',
         font=dict(size=12),
+        showlegend=True,
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=1,
+            xanchor="left",
+            x=1.02
+        )
     )
 
     return fig
 
 # =========================== Total Exercises =========================== #
 
-total_exercises = len(df)
+total_gym_days = len(df)
 # print("Total events:", total_exercises)
 
 # ========================= Push Exercises =========================== #
@@ -199,7 +238,7 @@ total_exercises = len(df)
 # Filter for Push category and create explicit copy
 df_push = df_long[df_long['Category'] == 'Push'].reset_index(drop=True)
 # df_push = df_push.reset_index(drop=True)
-print("DF Push: \n", df_push.head())
+# print("DF Push: \n", df_push.head())
 
 df_push["Exercise"] = (
     df_push["Exercise"]
@@ -209,8 +248,8 @@ df_push["Exercise"] = (
 
 df_push = df_push.dropna(subset=["Exercise", "Date", "Weight"])
 
-print(f"\nPush exercises found: {len(df_push)}")
-print(f"Push exercise names: {df_push['Exercise'].unique()}")
+# print(f"\nPush exercises found: {len(df_push)}")
+# print(f"Push exercise names: {df_push['Exercise'].unique()}")
 push_line = make_line_chart(df_push, 'Push Progress Over Time')
 
 # ========================= Pull Exercises =========================== #
@@ -269,7 +308,12 @@ df_calisthenics = df_long[df_long['Category'] == 'Calisthenics'].reset_index(dro
 
 calisthenics_line = make_line_chart(df_calisthenics, 'Calisthenics Progress Over Time')
 
-# =========================  Exercises =========================== #
+# ========================= Cardio Exercises =========================== #
+
+# Filter for Cardio category and reset index
+df_cardio = df_long[df_long['Category'] == 'Cardio'].reset_index(drop=True)
+
+cardio_line = make_line_chart(df_cardio, 'Cardio Progress Over Time')
 
 # ========================== DataFrame Table ========================== #
 
@@ -299,11 +343,35 @@ app.layout = html.Div(
             className='divv', 
             children=[ 
                 html.H1(
-                    f'CxLos Fitness Tracker',  
+                    f"CxLos Fitness Tracker",  
                     className='title'),
                 html.H1(
-                    f'{report_year}', 
+                    id='year-subtitle',
+                    children='All Time',  
                     className='title2'),
+                html.Div(
+                    className='dropdown-container',
+                    children=[
+                        html.Label('', style={'marginRight': '10px', 'fontWeight': 'bold'}),
+                        dcc.Dropdown(
+                            id='year-dropdown',
+                            options=[
+                                {'label': 'All Time', 'value': 'All Time'},
+                                {'label': '2026', 'value': '2026'},
+                            ],
+                            value='All Time',
+                            clearable=False,
+                            style={
+                                'width': '150px',
+                                'fontFamily': '-apple-system, BlinkMacSystemFont, "Segoe UI", Calibri, Arial, sans-serif',
+                                'backgroundColor': 'rgb(253, 180, 180)',
+                                'border': '2px solid rgb(217, 24, 24)',
+                                'borderRadius': '50px'
+                            }
+                        ),
+                    ],
+                    style={'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center', 'margin': '20px 0'}
+                ),
                 html.Div(
                     className='btn-box', 
                     children=[
@@ -330,21 +398,23 @@ html.Div(
                     className='title-box',
                     children=[
                         html.H3(
+                            id='total-exercises-title',
                             className='rollup-title',
-                            children=[f'Total Exercises']
+                            children=[f'Total Gym Days All Time']
                         ),
                     ]
                 ),
 
                 html.Div(
-                    className='circle-box',
+                    className='circle-box-1',
                     children=[
                         html.Div(
                             className='circle-1',
                             children=[
                                 html.H1(
+                                    id='total-exercises',
                                 className='rollup-number',
-                                children=[total_exercises]
+                                children=[total_gym_days]
                             ),
                             ]
                         )
@@ -359,6 +429,7 @@ html.Div(
                     className='title-box',
                     children=[
                         html.H3(
+                            id='-days-title',
                             className='rollup-title',
                             children=['Placeholder']
                         ),
@@ -371,6 +442,7 @@ html.Div(
                             className='circle-2',
                             children=[
                                 html.H1(
+                                id='-days',
                                 className='rollup-number',
                                 children=['-']
                             ),
@@ -383,24 +455,259 @@ html.Div(
     ]
 ),
 
+# html.Div(
+#     className='rollup-row',
+#     children=[
+        
+#         html.Div(
+#             className='rollup-box-tl',
+#             children=[
+#                 html.Div(
+#                     className='title-box',
+#                     children=[
+#                         html.H3(
+#                             id='pull-days-title',
+#                             className='rollup-title',
+#                             children=[f'Total Pull Days All Time']
+#                         ),
+#                     ]
+#                 ),
+
+#                 html.Div(
+#                     className='circle-box',
+#                     children=[
+#                         html.Div(
+#                             className='circle-1',
+#                             children=[
+#                                 html.H1(
+#                                     id='pull-days',
+#                                 className='rollup-number',
+#                                 children=['-']
+#                             ),
+#                             ]
+#                         )
+#                     ],
+#                 ),
+#             ]
+#         ),
+#         html.Div(
+#             className='rollup-box-tr',
+#             children=[
+#                 html.Div(
+#                     className='title-box',
+#                     children=[
+#                         html.H3(
+#                             id='leg-days-title',
+#                             className='rollup-title',
+#                             children=['Total Leg Days All Time']
+#                         ),
+#                     ]
+#                 ),
+#                 html.Div(
+#                     className='circle-box',
+#                     children=[
+#                         html.Div(
+#                             className='circle-2',
+#                             children=[
+#                                 html.H1(
+#                                 id='leg-days',
+#                                 className='rollup-number',
+#                                 children=['-']
+#                             ),
+#                             ]
+#                         )
+#                     ],
+#                 ),
+#             ]
+#         ),
+#     ]
+# ),
+
+# html.Div(
+#     className='rollup-row',
+#     children=[
+        
+#         html.Div(
+#             className='rollup-box-tl',
+#             children=[
+#                 html.Div(
+#                     className='title-box',
+#                     children=[
+#                         html.H3(
+#                             id='arm-days-title',
+#                             className='rollup-title',
+#                             children=[f'Total Arm Days All Time']
+#                         ),
+#                     ]
+#                 ),
+
+#                 html.Div(
+#                     className='circle-box',
+#                     children=[
+#                         html.Div(
+#                             className='circle-1',
+#                             children=[
+#                                 html.H1(
+#                                     id='arm-days',
+#                                 className='rollup-number',
+#                                 children=['-']
+#                             ),
+#                             ]
+#                         )
+#                     ],
+#                 ),
+#             ]
+#         ),
+#         html.Div(
+#             className='rollup-box-tr',
+#             children=[
+#                 html.Div(
+#                     className='title-box',
+#                     children=[
+#                         html.H3(
+#                             id='ab-days-title',
+#                             className='rollup-title',
+#                             children=['Total Ab Days All Time']
+#                         ),
+#                     ]
+#                 ),
+#                 html.Div(
+#                     className='circle-box',
+#                     children=[
+#                         html.Div(
+#                             className='circle-2',
+#                             children=[
+#                                 html.H1(
+#                                 id='ab-days',
+#                                 className='rollup-number',
+#                                 children=['-']
+#                             ),
+#                             ]
+#                         )
+#                     ],
+#                 ),
+#             ]
+#         ),
+#     ]
+# ),
+
+# html.Div(
+#     className='rollup-row',
+#     children=[
+        
+#         html.Div(
+#             className='rollup-box-tl',
+#             children=[
+#                 html.Div(
+#                     className='title-box',
+#                     children=[
+#                         html.H3(
+#                             id='other-days-title',
+#                             className='rollup-title',
+#                             children=[f'Total Other Workouts All Time']
+#                         ),
+#                     ]
+#                 ),
+
+#                 html.Div(
+#                     className='circle-box',
+#                     children=[
+#                         html.Div(
+#                             className='circle-1',
+#                             children=[
+#                                 html.H1(
+#                                     id='other-days',
+#                                 className='rollup-number',
+#                                 children=['-']
+#                             ),
+#                             ]
+#                         )
+#                     ],
+#                 ),
+#             ]
+#         ),
+#         html.Div(
+#             className='rollup-box-tr',
+#             children=[
+#                 html.Div(
+#                     className='title-box',
+#                     children=[
+#                         html.H3(
+#                             id='-days-title',
+#                             className='rollup-title',
+#                             children=['Placeholder']
+#                         ),
+#                     ]
+#                 ),
+#                 html.Div(
+#                     className='circle-box',
+#                     children=[
+#                         html.Div(
+#                             className='circle-2',
+#                             children=[
+#                                 html.H1(
+#                                 id='-days',
+#                                 className='rollup-number',
+#                                 children=['-']
+#                             ),
+#                             ]
+#                         )
+#                     ],
+#                 ),
+#             ]
+#         ),
+#     ]
+# ),
+
 # ============================ Visuals ========================== #
 
 html.Div(
     className='graph-container',
     children=[
         
-        html.H1(
-            className='visuals-text',
-            children='Visuals'
-        ),
+        # html.H1(
+        #     className='visuals-text',
+        #     children='Visuals'
+        # ),
         
         html.Div(
             className='graph-row',
             children=[
                 html.Div(
+                    className='rollup-box',
+                    children=[
+                        html.Div(
+                            className='title-box',
+                            children=[
+                                html.H3(
+                                    id='push-days-title',
+                                    className='rollup-title',
+                                    children=['Total Push Days All Time']
+                                ),
+                            ]
+                        ),
+                        html.Div(
+                            className='circle-box',
+                            children=[
+                                html.Div(
+                                    className='circle',
+                                    children=[
+                                        html.H1(
+                                        id='push-days',
+                                        className='rollup-number',
+                                        children=['-']
+                                    ),
+                                    ]
+                                )
+                            ],
+                        ),
+                    ]
+                ),
+                html.Div(
                     className='wide-box',
                     children=[
                         dcc.Graph(
+                            id='push-graph',
                             className='wide-graph',
                             figure=push_line
                         )
@@ -413,9 +720,41 @@ html.Div(
             className='graph-row',
             children=[
                 html.Div(
+                    className='rollup-box',
+                    children=[
+                        html.Div(
+                            className='title-box',
+                            children=[
+                                html.H3(
+                                    id='pull-days-title',
+                                    className='rollup-title',
+                                    children=[f'Total Pull Days All Time']
+                                ),
+                            ]
+                        ),
+
+                        html.Div(
+                            className='circle-box',
+                            children=[
+                                html.Div(
+                                    className='circle',
+                                    children=[
+                                        html.H1(
+                                            id='pull-days',
+                                        className='rollup-number',
+                                        children=['-']
+                                    ),
+                                    ]
+                                )
+                            ],
+                        ),
+                    ]
+                ),
+                html.Div(
                     className='wide-box',
                     children=[
                         dcc.Graph(
+                            id='pull-graph',
                             className='wide-graph',
                             figure=pull_line
                         )
@@ -428,9 +767,40 @@ html.Div(
             className='graph-row',
             children=[
                 html.Div(
+                    className='rollup-box',
+                    children=[
+                        html.Div(
+                            className='title-box',
+                            children=[
+                                html.H3(
+                                    id='leg-days-title',
+                                    className='rollup-title',
+                                    children=['Total Leg Days All Time']
+                                ),
+                            ]
+                        ),
+                        html.Div(
+                            className='circle-box',
+                            children=[
+                                html.Div(
+                                    className='circle',
+                                    children=[
+                                        html.H1(
+                                        id='leg-days',
+                                        className='rollup-number',
+                                        children=['-']
+                                    ),
+                                    ]
+                                )
+                            ],
+                        ),
+                    ]
+                ),
+                html.Div(
                     className='wide-box',
                     children=[
                         dcc.Graph(
+                            id='leg-graph',
                             className='wide-graph',
                             figure=leg_line
                         )
@@ -443,9 +813,40 @@ html.Div(
             className='graph-row',
             children=[
                 html.Div(
+                    className='rollup-box',
+                    children=[
+                        html.Div(
+                            className='title-box',
+                            children=[
+                                html.H3(
+                                    id='bicep-days-title',
+                                    className='rollup-title',
+                                    children=['Total Bicep Days All Time']
+                                ),
+                            ]
+                        ),
+                        html.Div(
+                            className='circle-box',
+                            children=[
+                                html.Div(
+                                    className='circle',
+                                    children=[
+                                        html.H1(
+                                        id='bicep-days',
+                                        className='rollup-number',
+                                        children=['-']
+                                    ),
+                                    ]
+                                )
+                            ],
+                        ),
+                    ]
+                ),
+                html.Div(
                     className='wide-box',
                     children=[
                         dcc.Graph(
+                            id='bicep-graph',
                             className='wide-graph',
                             figure=bicep_line
                         )
@@ -458,9 +859,40 @@ html.Div(
             className='graph-row',
             children=[
                 html.Div(
+                    className='rollup-box',
+                    children=[
+                        html.Div(
+                            className='title-box',
+                            children=[
+                                html.H3(
+                                    id='tricep-days-title',
+                                    className='rollup-title',
+                                    children=['Total Tricep Days All Time']
+                                ),
+                            ]
+                        ),
+                        html.Div(
+                            className='circle-box',
+                            children=[
+                                html.Div(
+                                    className='circle',
+                                    children=[
+                                        html.H1(
+                                        id='tricep-days',
+                                        className='rollup-number',
+                                        children=['-']
+                                    ),
+                                    ]
+                                )
+                            ],
+                        ),
+                    ]
+                ),
+                html.Div(
                     className='wide-box',
                     children=[
                         dcc.Graph(
+                            id='tricep-graph',
                             className='wide-graph',
                             figure=tricep_line
                         )
@@ -473,9 +905,40 @@ html.Div(
             className='graph-row',
             children=[
                 html.Div(
+                    className='rollup-box',
+                    children=[
+                        html.Div(
+                            className='title-box',
+                            children=[
+                                html.H3(
+                                    id='shoulder-days-title',
+                                    className='rollup-title',
+                                    children=['Total Shoulder Days All Time']
+                                ),
+                            ]
+                        ),
+                        html.Div(
+                            className='circle-box',
+                            children=[
+                                html.Div(
+                                    className='circle',
+                                    children=[
+                                        html.H1(
+                                        id='shoulder-days',
+                                        className='rollup-number',
+                                        children=['-']
+                                    ),
+                                    ]
+                                )
+                            ],
+                        ),
+                    ]
+                ),
+                html.Div(
                     className='wide-box',
                     children=[
                         dcc.Graph(
+                            id='shoulder-graph',
                             className='wide-graph',
                             figure=shoulder_line
                         )
@@ -483,14 +946,93 @@ html.Div(
                 ),
             ]
         ),
+
         
         html.Div(
             className='graph-row',
             children=[
                 html.Div(
+                    className='rollup-box',
+                    children=[
+                        html.Div(
+                            className='title-box',
+                            children=[
+                                html.H3(
+                                    id='calisthenics-days-title',
+                                    className='rollup-title',
+                                    children=['Total Calisthenics Days All Time']
+                                ),
+                            ]
+                        ),
+                        html.Div(
+                            className='circle-box',
+                            children=[
+                                html.Div(
+                                    className='circle',
+                                    children=[
+                                        html.H1(
+                                        id='calisthenics-days',
+                                        className='rollup-number',
+                                        children=['-']
+                                    ),
+                                    ]
+                                )
+                            ],
+                        ),
+                    ]
+                ),
+                html.Div(
                     className='wide-box',
                     children=[
                         dcc.Graph(
+                            id='calisthenics-graph',
+                            className='wide-graph',
+                            figure=calisthenics_line
+                        )
+                    ]
+                ),
+            ]
+        ),
+
+                
+        html.Div(
+            className='graph-row',
+            children=[
+                html.Div(
+                    className='rollup-box',
+                    children=[
+                        html.Div(
+                            className='title-box',
+                            children=[
+                                html.H3(
+                                    id='ab-days-title',
+                                    className='rollup-title',
+                                    children=['Total  Days All Time']
+                                ),
+                            ]
+                        ),
+                        html.Div(
+                            className='circle-box',
+                            children=[
+                                html.Div(
+                                    className='circle',
+                                    children=[
+                                        html.H1(
+                                        id='ab-days',
+                                        className='rollup-number',
+                                        children=['-']
+                                    ),
+                                    ]
+                                )
+                            ],
+                        ),
+                    ]
+                ),
+                html.Div(
+                    className='wide-box',
+                    children=[
+                        dcc.Graph(
+                            id='ab-graph',
                             className='wide-graph',
                             figure=ab_line
                         )
@@ -503,11 +1045,88 @@ html.Div(
             className='graph-row',
             children=[
                 html.Div(
+                    className='rollup-box',
+                    children=[
+                        html.Div(
+                            className='title-box',
+                            children=[
+                                html.H3(
+                                    id='forearm-days-title',
+                                    className='rollup-title',
+                                    children=['Total Forearm Days All Time']
+                                ),
+                            ]
+                        ),
+                        html.Div(
+                            className='circle-box',
+                            children=[
+                                html.Div(
+                                    className='circle',
+                                    children=[
+                                        html.H1(
+                                        id='forearm-days',
+                                        className='rollup-number',
+                                        children=['-']
+                                    ),
+                                    ]
+                                )
+                            ],
+                        ),
+                    ]
+                ),
+                html.Div(
                     className='wide-box',
                     children=[
                         dcc.Graph(
+                            id='forearm-graph',
                             className='wide-graph',
-                            figure=calisthenics_line
+                            figure=forearm_line
+                        )
+                    ]
+                ),
+            ]
+        ),
+        
+        html.Div(
+            className='graph-row',
+            children=[
+                html.Div(
+                    className='rollup-box',
+                    children=[
+                        html.Div(
+                            className='title-box',
+                            children=[
+                                html.H3(
+                                    id='cardio-days-title',
+                                    className='rollup-title',
+                                    children=['Total Cardio Days All Time']
+                                ),
+                            ]
+                        ),
+                        html.Div(
+                            className='circle-box',
+                            children=[
+                                html.Div(
+                                    className='circle',
+                                    children=[
+                                        html.H1(
+                                        id='cardio-days',
+                                        className='rollup-number',
+                                        children=['-']
+                                    ),
+                                    ]
+                                )
+                            ],
+                        ),
+                    ]
+                ),
+                html.Div(
+                    className='wide-box',
+                    children=[
+                        dcc.Graph(
+                            id='cardio-graph',
+                            className='wide-graph',
+                            figure=cardio_line
                         )
                     ]
                 ),
@@ -522,6 +1141,7 @@ html.Div(
         className='data-box',
         children=[
             html.H1(
+                id='table-title',
                 className='data-title',
                 children=f'Fitness Tracker Table {report_year}'
             ),
@@ -572,6 +1192,196 @@ html.Div(
         ]
     ),
 ])
+
+# ============================== Callback ========================== #
+
+@app.callback(
+    [
+        Output('year-subtitle', 'children'),
+        Output('total-exercises-title', 'children'),
+        Output('total-exercises', 'children'),
+        Output('push-days-title', 'children'),
+        Output('push-days', 'children'),
+        Output('pull-days-title', 'children'),
+        Output('pull-days', 'children'),
+        Output('leg-days-title', 'children'),
+        Output('leg-days', 'children'),
+        Output('bicep-days-title', 'children'),
+        Output('bicep-days', 'children'),
+        Output('tricep-days-title', 'children'),
+        Output('tricep-days', 'children'),
+        Output('shoulder-days-title', 'children'),
+        Output('shoulder-days', 'children'),
+        Output('calisthenics-days-title', 'children'),
+        Output('calisthenics-days', 'children'),
+        Output('ab-days-title', 'children'),
+        Output('ab-days', 'children'),
+        Output('forearm-days-title', 'children'),
+        Output('forearm-days', 'children'),
+        Output('cardio-days-title', 'children'),
+        Output('cardio-days', 'children'),
+        Output('push-graph', 'figure'),
+        Output('pull-graph', 'figure'),
+        Output('leg-graph', 'figure'),
+        Output('bicep-graph', 'figure'),
+        Output('tricep-graph', 'figure'),
+        Output('shoulder-graph', 'figure'),
+        Output('ab-graph', 'figure'),
+        Output('calisthenics-graph', 'figure'),
+        Output('forearm-graph', 'figure'),
+        Output('cardio-graph', 'figure'),
+        Output('table-title', 'children'),
+        Output('applications-table', 'data'),
+        Output('applications-table', 'columns'),
+    ],
+    [Input('year-dropdown', 'value')]
+)
+def update_dashboard(selected_year):
+    # Load data for selected year
+    df_year = load_data_for_year(selected_year)
+    
+    # Get all date columns (everything except Category and Exercise)
+    date_columns = [col for col in df_year.columns if col not in ['Category', 'Exercise']]
+    
+    # Reshape from wide to long format
+    df_long = df_year.melt(
+        id_vars=['Category', 'Exercise'],
+        value_vars=date_columns,
+        var_name='Date',
+        value_name='Weight'
+    )
+    
+    # Convert Date to datetime with format specification
+    df_long['Date'] = pd.to_datetime(df_long['Date'], errors='coerce', format='mixed')
+    df_long = df_long.sort_values('Date')
+    
+    # Convert Weight to numeric
+    df_long['Weight'] = pd.to_numeric(df_long['Weight'], errors='coerce')
+    
+    # Remove rows with NaN weights
+    df_long = df_long.dropna(subset=['Weight'])
+    df_long = df_long[df_long['Weight'].notna()]
+    df_long = df_long[df_long['Weight'] != '']
+    
+    # Strip whitespace
+    df_long['Category'] = df_long['Category'].astype(str).str.strip()
+    df_long['Exercise'] = df_long['Exercise'].astype(str).str.strip()
+    
+    # Remove duplicates
+    df_long = df_long.drop_duplicates(subset=['Category', 'Exercise', 'Date'], keep='first')
+    df_long = df_long.reset_index(drop=True)
+    
+    # Ensure correct types
+    df_long['Category'] = df_long['Category'].astype('object')
+    df_long['Exercise'] = df_long['Exercise'].astype('object')
+    df_long['Date'] = pd.to_datetime(df_long['Date'])
+    df_long['Weight'] = df_long['Weight'].astype('float64')
+    
+    # Calculate total unique gym days (unique dates)
+    total = df_long['Date'].nunique()
+    
+    # Create graphs for each category
+    df_push = df_long[df_long['Category'] == 'Push'].reset_index(drop=True)
+    push_days = df_push['Date'].nunique() if not df_push.empty else 0
+    push_fig = make_line_chart(df_push, f'Push Progress Over Time - {selected_year}')
+    
+    df_pull = df_long[df_long['Category'] == 'Pull'].reset_index(drop=True)
+    pull_days = df_pull['Date'].nunique() if not df_pull.empty else 0
+    pull_fig = make_line_chart(df_pull, f'Pull Progress Over Time - {selected_year}')
+    
+    df_leg = df_long[df_long['Category'] == 'Leg'].reset_index(drop=True)
+    leg_days = df_leg['Date'].nunique() if not df_leg.empty else 0
+    leg_fig = make_line_chart(df_leg, f'Leg Progress Over Time - {selected_year}')
+    
+    # Calculate bicep days
+    df_bicep = df_long[df_long['Category'] == 'Bicep'].reset_index(drop=True)
+    bicep_days = df_bicep['Date'].nunique() if not df_bicep.empty else 0
+    bicep_fig = make_line_chart(df_bicep, f'Bicep Progress Over Time - {selected_year}')
+    
+    df_tricep = df_long[df_long['Category'] == 'Tricep'].reset_index(drop=True)
+    tricep_days = df_tricep['Date'].nunique() if not df_tricep.empty else 0
+    tricep_fig = make_line_chart(df_tricep, f'Tricep Progress Over Time - {selected_year}')
+    
+    df_shoulder = df_long[df_long['Category'] == 'Shoulder'].reset_index(drop=True)
+    shoulder_days = df_shoulder['Date'].nunique() if not df_shoulder.empty else 0
+    shoulder_fig = make_line_chart(df_shoulder, f'Shoulder Progress Over Time - {selected_year}')
+    
+    df_ab = df_long[df_long['Category'] == 'Ab'].reset_index(drop=True)
+    ab_days = df_ab['Date'].nunique() if not df_ab.empty else 0
+    ab_fig = make_line_chart(df_ab, f'Ab Progress Over Time - {selected_year}')
+    
+    df_calisthenics = df_long[df_long['Category'] == 'Calisthenics'].reset_index(drop=True)
+    calisthenics_days = df_calisthenics['Date'].nunique() if not df_calisthenics.empty else 0
+    calisthenics_fig = make_line_chart(df_calisthenics, f'Calisthenics Progress Over Time - {selected_year}')
+    
+    df_forearm = df_long[df_long['Category'] == 'Forearm'].reset_index(drop=True)
+    forearm_days = df_forearm['Date'].nunique() if not df_forearm.empty else 0
+    forearm_fig = make_line_chart(df_forearm, f'Forearm Progress Over Time - {selected_year}')
+    
+    df_cardio = df_long[df_long['Category'] == 'Cardio'].reset_index(drop=True)
+    cardio_days = df_cardio['Date'].nunique() if not df_cardio.empty else 0
+    cardio_fig = make_line_chart(df_cardio, f'Cardio Progress Over Time - {selected_year}')
+    
+    # Prepare table data
+    df_indexed = df_long.reset_index(drop=True).copy()
+    column_order = ['Date', 'Category', 'Exercise', 'Weight']
+    df_indexed = df_indexed[column_order]
+    df_indexed.insert(0, '#', df_indexed.index + 1)
+    
+    table_data = df_indexed.to_dict('records')
+    table_columns = [{"name": col, "id": col} for col in df_indexed.columns]
+    table_title = f'Fitness Tracker Table - {selected_year}'
+    rollup_title = f'Total Gym Days - {selected_year}'
+    push_title = f'Total Push Days - {selected_year}'
+    pull_title = f'Total Pull Days - {selected_year}'
+    leg_title = f'Total Leg Days - {selected_year}'
+    bicep_title = f'Total Bicep Days - {selected_year}'
+    tricep_title = f'Total Tricep Days - {selected_year}'
+    shoulder_title = f'Total Shoulder Days - {selected_year}'
+    calisthenics_title = f'Total Calisthenics Days - {selected_year}'
+    ab_title = f'Total Ab Days - {selected_year}'
+    forearm_title = f'Total Forearm Days - {selected_year}'
+    cardio_title = f'Total Cardio Days - {selected_year}'
+    year_subtitle = selected_year
+    
+    return (
+        year_subtitle,
+        rollup_title,
+        total,
+        push_title,
+        push_days,
+        pull_title,
+        pull_days,
+        leg_title,
+        leg_days,
+        bicep_title,
+        bicep_days,
+        tricep_title,
+        tricep_days,
+        shoulder_title,
+        shoulder_days,
+        calisthenics_title,
+        calisthenics_days,
+        ab_title,
+        ab_days,
+        forearm_title,
+        forearm_days,
+        cardio_title,
+        cardio_days,
+        push_fig,
+        pull_fig,
+        leg_fig,
+        bicep_fig,
+        tricep_fig,
+        shoulder_fig,
+        ab_fig,
+        calisthenics_fig,
+        forearm_fig,
+        cardio_fig,
+        table_title,
+        table_data,
+        table_columns
+    )
 
 print(f"Serving Flask app '{current_file}'! 🚀")
 

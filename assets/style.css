@@ -58,12 +58,12 @@ html, body {
 .btn {
   display: inline-block;
   text-align: center;
-  margin: 10px 15px 15px 15px;
+  margin: 0px 15px 20px 15px;
   padding: 4px 5px 4px 5px;
   color:black;
   background-color: rgb(253, 180, 180);
-  border: 3.5px solid rgb(217, 24, 24);
-  border-radius: 50px;
+  border: 2.5px solid rgb(217, 24, 24);
+  border-radius: 10px;
   font-size: 15px;
   font-family: 'Calibri';
   text-decoration: none;
@@ -95,6 +95,19 @@ html, body {
   border-bottom: 2px solid rgb(0, 0, 0);
 }
 
+.rollup-box {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 50%;
+  height: 100%;
+  gap: 1rem;
+  min-width: 0; 
+
+  margin: 0px 0px 0px 0px;
+  /* padding: 0px 0px 0px 0px; */
+}
 .rollup-box-tl {
   display: flex;
   flex-direction: column;
@@ -217,8 +230,37 @@ html, body {
 
   /* width: 20%; */
   /* height: 100%;  */
-  margin: 10px 0px 35px 0px;
+  margin: 0px 0px 0px 0px;
+  padding: 0px 0px 10px 0px;
+}
+.circle-box-1 {
+  display: flex; 
+  flex-direction: column;
+  justify-content: center; 
+  align-items: center;
+    box-sizing: border-box;
+
+  /* width: 20%; */
+  /* height: 100%;  */
+  margin: 0px 0px 25px 0px;
   padding: 0px 0px 0px 0px;
+}
+
+.circle {
+  display: flex; 
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+
+  margin: 0px 0px 0px 0px;
+  padding: 12px 10px 12px 10px;
+  /* padding: 22px 5px 22px 5px; */
+
+  border: 15px solid rgb(217, 24, 24);
+  border-radius: 100px;
+  background-color: rgb(234, 128, 128);
+  width: 100%; /* Adjust width to ensure it fills the parent */
+  height: auto; /* Adjust height if needed */
 }
 
 .circle-1 {
@@ -228,7 +270,8 @@ html, body {
   text-align: center;
 
   margin: 0px 0px 0px 0px;
-  padding: 22px 5px 22px 5px;
+  padding: 10px 10px 10px 10px;
+  /* padding: 22px 5px 22px 5px; */
 
   border: 15px solid rgb(217, 24, 24);
   border-radius: 100px;
@@ -244,7 +287,7 @@ html, body {
   text-align: center;
 
   margin: 0px 0px 0px 0px;
-   padding: 22px 5px 22px 5px;
+   padding: 0px 8px 0px 8px;
 
   border: 15px solid rgb(217, 24, 24);
   border-radius: 100px;
@@ -292,7 +335,7 @@ html, body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 2.5rem;
+  gap: 1rem;
 
   width: 100%;
   height: auto;
@@ -309,7 +352,7 @@ html, body {
 
   font-size: clamp(24px, 4vw, 45px);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Calibri, Arial, sans-serif;
-  color: rgb(38, 38, 38);
+  color: rgb(0, 0, 0);
 
   margin: 30px 0px 0px 0px;
   padding: 0px 0px 0px 0px; 
@@ -317,10 +360,10 @@ html, body {
 
 .graph-row {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 2%;
+  gap: 2rem;
 
   width: 98%;
   height: auto;
@@ -361,7 +404,7 @@ html, body {
 
   width: 95%;
   /* height: auto; */
-  height: 80vh;
+  height: 70vh;
   margin: 0px 0px 0px 0px;
   padding: 0px 0px 0px 0px;
 }
@@ -473,7 +516,7 @@ html, body {
 .data-title {
   font-size: clamp(24px, 4vw, 45px);
   text-align: center;
-  color: rgb(38, 38, 38);
+  color: rgb(0, 0, 0);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Calibri, Arial, sans-serif;
   margin: 5px 0px 0px 0px;
   padding: 0px 0px 0px 0px;
@@ -518,6 +561,7 @@ html, body {
   .graph-box,
   .wide-box,
   .databox,
+  .rollup-box,
   .rollup-box-tl,
   .rollup-box-tr,
   .rollup-box-bl,
@@ -631,4 +675,55 @@ html, body {
   .js-plotly-plot .legend .traces text {
     font-size: 10px !important;
   }
+}
+
+/* =================== Dropdown Styling =================== */
+
+/* .dropdown-container:hover {
+  cursor: pointer;
+} */
+
+/* Main dropdown control */
+.Select-control,
+.Select-control:hover,
+#year-dropdown,
+div[id="year-dropdown"],
+div[id="year-dropdown"] > div {
+  cursor: pointer !important;
+}
+
+/* Dropdown menu container */
+.Select-menu-outer {
+  background-color: rgb(253, 180, 180) !important;
+  border: 3px solid rgb(217, 24, 24) !important;
+  border-radius: 10px !important;
+}
+
+/* Individual dropdown options */
+.Select-option {
+  background-color: rgb(253, 180, 180) !important;
+  color: rgb(217, 24, 24) !important;
+  font-weight: bold !important;
+  padding: 8px 12px !important;
+}
+
+/* Hovered option */
+.Select-option.is-focused,
+.Select-option:hover {
+  background-color: rgb(217, 24, 24) !important;
+  color: white !important;
+}
+
+/* Selected option */
+.Select-option.is-selected {
+  background-color: rgb(217, 24, 24) !important;
+  color: white !important;
+  font-weight: bold !important;
+}
+
+/* Additional selectors for newer Dash versions */
+div[class*="option"]:hover,
+div[data-value]:hover {
+  background-color: rgb(217, 24, 24) !important;
+  color: white !important;
 }
