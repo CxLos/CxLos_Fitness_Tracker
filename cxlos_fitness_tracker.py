@@ -228,7 +228,7 @@ def make_line_chart(df_cat: pd.DataFrame, title: str) -> go.Figure:
 
 # Create empty figures for initial load
 empty_fig = go.Figure()
-empty_fig.update_layout(title=dict(text='Loading...', x=0.5, font=dict(size=20)))
+empty_fig.update_layout(title=dict(text='Please Select a Year', x=0.5, font=dict(size=20)))
 
 # Prepare initial table data using the already loaded df_long
 df_indexed = df_long.reset_index(drop=True).copy()
@@ -1225,10 +1225,14 @@ html.Div(
         Output('applications-table', 'columns'),
     ],
     [Input('year-dropdown', 'value')],
-    prevent_initial_call=True
+    # prevent_initial_call=True
     # prevent_initial_call=False 
 )
 def update_dashboard(selected_year):
+
+    # Handle None (no selection yet) - this is the key fix
+    if selected_year is None:
+        selected_year = 'All Time'
 
     try:
         print(f"🔄 Callback triggered for year: {selected_year}")
