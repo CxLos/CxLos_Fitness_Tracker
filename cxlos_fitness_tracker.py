@@ -147,7 +147,7 @@ df_long = df.melt(
 )
 
 # Remove rows where Date contains common non-date values
-df_long = df_long[~df_long['Date'].astype(str).str.contains(r'Int\.|Unnamed|#', case=False, na=False)]
+# df_long = df_long[~df_long['Date'].astype(str).str.contains(r'Int\.|Unnamed|#', case=False, na=False)]
 
 # Convert Date to datetime with format specification
 df_long['Date'] = pd.to_datetime(df_long['Date'], errors='coerce', format='mixed')
@@ -1307,7 +1307,7 @@ def update_dashboard(selected_year):
     df_push = df_long[df_long['Category'] == 'Push'].reset_index(drop=True)
     # push_days = df_push['Date'].nunique() if not df_push.empty else 0
     push_fig = make_line_chart(df_push, f'Push Progress Over Time - {selected_year}')
-    
+
     df_push_counts = df_push['Exercise'].value_counts().reset_index()
     df_push_counts.columns = ['Exercise', 'Count']
 
