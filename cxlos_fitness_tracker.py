@@ -1305,10 +1305,17 @@ def update_dashboard(selected_year):
     
     # Create graphs for each category
     df_push = df_long[df_long['Category'] == 'Push'].reset_index(drop=True)
-    push_days = df_push['Date'].nunique() if not df_push.empty else 0
+    # push_days = df_push['Date'].nunique() if not df_push.empty else 0
     push_fig = make_line_chart(df_push, f'Push Progress Over Time - {selected_year}')
+    
     df_push_counts = df_push['Exercise'].value_counts().reset_index()
     df_push_counts.columns = ['Exercise', 'Count']
+
+    # Add debug logging around line 1053:
+    print(f"📊 df_push_counts shape: {df_push_counts.shape}")
+    print(f"📊 df_push_counts:\n{df_push_counts}")
+    print(f"📊 Unique exercises: {df_push_counts['Exercise'].unique()}")
+    print(f"📊 Exercise dtypes: {df_push_counts['Exercise'].dtype}")
 
     push_bar_fig = px.bar(
         df_push_counts, 
@@ -1316,7 +1323,8 @@ def update_dashboard(selected_year):
         x='Count', 
         color="Exercise", 
         text='Count', 
-        orientation='h'
+        orientation='h',
+        # color_discrete_sequence=px.colors.qualitative.Vivid
     ).update_layout(
         title=dict(
             text=f'Push Exercise Bar Chart - {selected_year}', 
@@ -1374,7 +1382,7 @@ def update_dashboard(selected_year):
     ).update_traces(
         rotation=100, 
         texttemplate='%{percent:.1%}', 
-        hovertemplate='<b>%{label}</b>: %{value}<extra></extra>'
+        hovertemplate='<b>Exercise:</b> %{y}<br><b>Count</b>: %{x}<extra></extra>' 
     )
     
     df_pull = df_long[df_long['Category'] == 'Pull'].reset_index(drop=True)
