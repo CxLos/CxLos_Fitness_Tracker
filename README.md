@@ -44,6 +44,9 @@ python fitness_tracker.py
 
 The dashboard will be available at `http://127.0.0.1:8050/`
 
+## 🌐 Live Demo
+
+**[View Live Dashboard](https://cxlos-fitness-tracker.onrender.com/)**
 ![Preview](./screenshots/image.png)
 
 ## 🧪 Methodology

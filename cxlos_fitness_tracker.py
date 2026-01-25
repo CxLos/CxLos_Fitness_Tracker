@@ -69,7 +69,7 @@ sheet = client.open_by_url(sheet_url)
 def load_data_for_year(year):
     """Load and process fitness data for a specific year or all years"""
     try:
-        print(f"📊 Loading data for year: {year}")
+        # print(f"📊 Loading data for year: {year}")
         
         if year == 'All Time':
             all_years = ['2026']
@@ -281,7 +281,9 @@ app.layout = html.Div(
                                 {'label': 'All Time', 'value': 'All Time'},
                                 {'label': '2026', 'value': '2026'},
                             ],
-                            value='All Time',
+                            # value='All Time',
+                            value=None,
+                            placeholder='Select Year',  # Add this line
                             clearable=False,
                             style={
                                 'width': '150px',
@@ -322,7 +324,7 @@ html.Div(
                         html.H3(
                             id='total-exercises-title',
                             className='rollup-title',
-                            children=[f'Total Gym Days All Time']
+                            children=[f'Total Gym Days']
                         ),
                     ]
                 ),
@@ -400,7 +402,7 @@ html.Div(
                                 html.H3(
                                     id='push-days-title',
                                     className='rollup-title',
-                                    children=['Total Push Days All Time']
+                                    children=['Total Push Days']
                                 ),
                             ]
                         ),
@@ -471,7 +473,7 @@ html.Div(
                                 html.H3(
                                     id='pull-days-title',
                                     className='rollup-title',
-                                    children=[f'Total Pull Days All Time']
+                                    children=[f'Total Pull Days']
                                 ),
                             ]
                         ),
@@ -543,7 +545,7 @@ html.Div(
                                 html.H3(
                                     id='leg-days-title',
                                     className='rollup-title',
-                                    children=['Total Leg Days All Time']
+                                    children=['Total Leg Days']
                                 ),
                             ]
                         ),
@@ -614,7 +616,7 @@ html.Div(
                                 html.H3(
                                     id='bicep-days-title',
                                     className='rollup-title',
-                                    children=['Total Bicep Days All Time']
+                                    children=['Total Bicep Days']
                                 ),
                             ]
                         ),
@@ -685,7 +687,7 @@ html.Div(
                                 html.H3(
                                     id='tricep-days-title',
                                     className='rollup-title',
-                                    children=['Total Tricep Days All Time']
+                                    children=['Total Tricep Days']
                                 ),
                             ]
                         ),
@@ -756,7 +758,7 @@ html.Div(
                                 html.H3(
                                     id='shoulder-days-title',
                                     className='rollup-title',
-                                    children=['Total Shoulder Days All Time']
+                                    children=['Total Shoulder Days']
                                 ),
                             ]
                         ),
@@ -828,7 +830,7 @@ html.Div(
                                 html.H3(
                                     id='calisthenics-days-title',
                                     className='rollup-title',
-                                    children=['Total Calisthenics Days All Time']
+                                    children=['Total Calisthenics Days']
                                 ),
                             ]
                         ),
@@ -900,7 +902,7 @@ html.Div(
                                 html.H3(
                                     id='ab-days-title',
                                     className='rollup-title',
-                                    children=['Total  Days All Time']
+                                    children=['Total  Days']
                                 ),
                             ]
                         ),
@@ -971,7 +973,7 @@ html.Div(
                                 html.H3(
                                     id='forearm-days-title',
                                     className='rollup-title',
-                                    children=['Total Forearm Days All Time']
+                                    children=['Total Forearm Days']
                                 ),
                             ]
                         ),
@@ -1042,7 +1044,7 @@ html.Div(
                                 html.H3(
                                     id='cardio-days-title',
                                     className='rollup-title',
-                                    children=['Total Cardio Days All Time']
+                                    children=['Total Cardio Days']
                                 ),
                             ]
                         ),
@@ -1223,7 +1225,8 @@ html.Div(
         Output('applications-table', 'columns'),
     ],
     [Input('year-dropdown', 'value')],
-    prevent_initial_call=False  # ← ADD THIS LINE
+    prevent_initial_call=True
+    # prevent_initial_call=False 
 )
 def update_dashboard(selected_year):
 
