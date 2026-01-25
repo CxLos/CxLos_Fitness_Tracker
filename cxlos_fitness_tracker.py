@@ -68,31 +68,40 @@ sheet = client.open_by_url(sheet_url)
 
 def load_data_for_year(year):
     """Load and process fitness data for a specific year or all years"""
-    if year == 'All Time':
-        # Load and combine all years
-        all_years = ['2026']
-        dfs = []
-        for yr in all_years:
-            try:
-                worksheet = sheet.worksheet(f"{yr}")
-                data = pd.DataFrame(worksheet.get_all_records())
-                dfs.append(data)
-            except:
-                # Skip if worksheet doesn't exist
-                print(f"Worksheet {yr} not found, skipping...")
-                continue
+    try:
+        print(f"📊 Loading data for year: {year}")
         
-        if dfs:
-            # Combine all dataframes
-            combined_df = pd.concat(dfs, ignore_index=True)
-            return combined_df.copy()
+        if year == 'All Time':
+            all_years = ['2026']
+            dfs = []
+            for yr in all_years:
+                try:
+                    worksheet = sheet.worksheet(f"{yr}")
+                    data = pd.DataFrame(worksheet.get_all_records())
+                    # print(f"✅ Loaded {len(data)} rows for {yr}")
+                    dfs.append(data)
+                except Exception as e:
+                    print(f"⚠️ Worksheet {yr} not found: {str(e)}")
+                    continue
+            
+            if dfs:
+                combined_df = pd.concat(dfs, ignore_index=True)
+                # print(f"✅ Combined total: {len(combined_df)} rows")
+                return combined_df.copy()
+            else:
+                print("❌ No data found for All Time")
+                return pd.DataFrame()
         else:
-            # Return empty dataframe if no data found
-            return pd.DataFrame()
-    else:
-        worksheet = sheet.worksheet(f"{year}")
-        data = pd.DataFrame(worksheet.get_all_records())
-        return data.copy()
+            worksheet = sheet.worksheet(f"{year}")
+            data = pd.DataFrame(worksheet.get_all_records())
+            # print(f"✅ Loaded {len(data)} rows for {year}")
+            return data.copy()
+            
+    except Exception as e:
+        print(f"❌ ERROR loading data for {year}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return pd.DataFrame()
 
 # Load default year (All Time)
 df = load_data_for_year('All Time')
@@ -1213,9 +1222,36 @@ html.Div(
         Output('applications-table', 'data'),
         Output('applications-table', 'columns'),
     ],
-    [Input('year-dropdown', 'value')]
+    [Input('year-dropdown', 'value')],
+    prevent_initial_call=False  # ← ADD THIS LINE
 )
 def update_dashboard(selected_year):
+
+    try:
+        print(f"🔄 Callback triggered for year: {selected_year}")
+        
+        # Load data for selected year
+        df_year = load_data_for_year(selected_year)
+        # print(f"✅ Loaded {len(df_year)} rows for {selected_year}")
+        
+        # ...existing code...
+        
+    except Exception as e:
+        print(f"❌ ERROR in callback: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # Return empty/error state
+        return (
+            f"Error: {selected_year}",
+            "Error loading data",
+            0,
+            *["Error"] * 20,  # All other text outputs
+            *[empty_fig] * 30,  # All graph outputs
+            "Error loading table",
+            [],
+            []
+        )
 
     # Load data for selected year
     df_year = load_data_for_year(selected_year)
