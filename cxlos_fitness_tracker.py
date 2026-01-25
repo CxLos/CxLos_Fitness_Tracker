@@ -126,19 +126,8 @@ columns =  [
 
 # ============================== Data Preprocessing ========================== #
 
-# Check for duplicate columns
-# duplicate_columns = df.columns[df.columns.duplicated()].tolist()
-# print(f"Duplicate columns found: {duplicate_columns}")
-# if duplicate_columns:
-#     print(f"Duplicate columns found: {duplicate_columns}")
-
 # Get all date columns (everything except Category and Exercise)
 date_columns = [col for col in df.columns if col not in ['Category', 'Exercise']]
-
-# Debug: See what columns are being melted
-# print("All columns in df:", df.columns.tolist())
-# print(f"\nDate columns to melt: {date_columns}")
-# print(f"\nFirst few rows of df:", df.head())
 
 # Reshape from wide to long format
 df_long = df.melt(
@@ -148,9 +137,8 @@ df_long = df.melt(
     value_name='Weight'     # New column name for cell values
 )
 
-# Filter out invalid date strings before converting
 # Remove rows where Date contains common non-date values
-df_long = df_long[~df_long['Date'].astype(str).str.contains('Int\.|Unnamed|#', case=False, na=False)]
+df_long = df_long[~df_long['Date'].astype(str).str.contains(r'Int\.|Unnamed|#', case=False, na=False)]
 
 # Convert Date to datetime with format specification
 df_long['Date'] = pd.to_datetime(df_long['Date'], errors='coerce', format='mixed')
@@ -185,9 +173,7 @@ df_long['Exercise'] = df_long['Exercise'].astype('object')
 df_long['Date'] = pd.to_datetime(df_long['Date'])
 df_long['Weight'] = df_long['Weight'].astype('float64')
 
-print("Melted DataFrame: \n", df_long.head(10))
-# print("\nDataFrame dtypes:\n", df_long.dtypes)
-# print("\nUnique exercises:\n", df_long['Exercise'].unique())
+# print("Melted DataFrame: \n", df_long.head(10))
 
 # Helper to build line charts without relying on Plotly Express grouping
 def make_line_chart(df_cat: pd.DataFrame, title: str) -> go.Figure:
@@ -243,76 +229,9 @@ df_indexed.insert(0, '#', df_indexed.index + 1)
 data = df_indexed.to_dict('records')
 columns = [{"name": col, "id": col} for col in df_indexed.columns]
 
-
-# =========================== Total Exercises =========================== #
-
-# total_gym_days = len(df)
-# print("Total events:", total_exercises)
-
-# ========================= Push Exercises =========================== #
-
-# Filter for Push category and create explicit copy
-df_push = df_long[df_long['Category'] == 'Push'].reset_index(drop=True)
-push_line = make_line_chart(df_push, 'Push Progress Over Time')
-
-# ========================= Pull Exercises =========================== #
-
-# Filter for Pull category and reset index
-df_pull = df_long[df_long['Category'] == 'Pull'].reset_index(drop=True)
-pull_line = make_line_chart(df_pull, 'Pull Progress Over Time')
-
-# ========================= Leg Exercises =========================== #
-
-# Filter for Leg category and reset index
-df_leg = df_long[df_long['Category'] == 'Leg'].reset_index(drop=True)
-leg_line = make_line_chart(df_leg, 'Leg Progress Over Time')
-
-# ========================= Bicep Exercises =========================== #
-
-# Filter for Bicep category and reset index
-df_bicep = df_long[df_long['Category'] == 'Bicep'].reset_index(drop=True)
-bicep_line = make_line_chart(df_bicep, 'Bicep Progress Over Time')
-
-# ========================= Tricep Exercises =========================== #
-
-# Filter for Tricep category and reset index
-df_tricep = df_long[df_long['Category'] == 'Tricep'].reset_index(drop=True)
-tricep_line = make_line_chart(df_tricep, 'Tricep Progress Over Time')
-
-# ========================= Shoulder Exercises =========================== #
-
-# Filter for Shoulder category and reset index
-df_shoulder = df_long[df_long['Category'] == 'Shoulder'].reset_index(drop=True)
-shoulder_line = make_line_chart(df_shoulder, 'Shoulder Progress Over Time')
-
-# ========================= Forearm Exercises =========================== #
-
-# Filter for Forearm category and reset index
-df_forearm = df_long[df_long['Category'] == 'Forearm'].reset_index(drop=True)
-forearm_line = make_line_chart(df_forearm, 'Forearm Progress Over Time')
-
-# ========================= Ab Exercises =========================== #
-
-# Filter for Ab category and reset index
-df_ab = df_long[df_long['Category'] == 'Ab'].reset_index(drop=True)
-ab_line = make_line_chart(df_ab, 'Ab Progress Over Time')
-
-# ========================= Calisthenics Exercises =========================== #
-
-# Filter for Calisthenics category and reset index
-df_calisthenics = df_long[df_long['Category'] == 'Calisthenics'].reset_index(drop=True)
-calisthenics_line = make_line_chart(df_calisthenics, 'Calisthenics Progress Over Time')
-
-# ========================= Cardio Exercises =========================== #
-
-# Filter for Cardio category and reset index
-df_cardio = df_long[df_long['Category'] == 'Cardio'].reset_index(drop=True)
-cardio_line = make_line_chart(df_cardio, 'Cardio Progress Over Time')
-
 # ========================== DataFrame Table ========================== #
 
 # create a display index column and prepare table data/columns
-# reset index to ensure contiguous numbering after any filtering/sorting upstream
 df_indexed = df_long.reset_index(drop=True).copy()
 
 # Reorder columns: Date first, then the rest
@@ -499,7 +418,7 @@ html.Div(
                         dcc.Graph(
                             id='push-graph',
                             className='wide-graph',
-                            figure=push_line
+                            figure=empty_fig
                         )
                     ]
                 ),
@@ -571,7 +490,7 @@ html.Div(
                         dcc.Graph(
                             id='pull-graph',
                             className='wide-graph',
-                            figure=pull_line
+                            figure=empty_fig
                         )
                     ]
                 ),
@@ -642,7 +561,7 @@ html.Div(
                         dcc.Graph(
                             id='leg-graph',
                             className='wide-graph',
-                            figure=leg_line
+                            figure=empty_fig
                         )
                     ]
                 ),
@@ -713,7 +632,7 @@ html.Div(
                         dcc.Graph(
                             id='bicep-graph',
                             className='wide-graph',
-                            figure=bicep_line
+                            figure=empty_fig
                         )
                     ]
                 ),
@@ -784,7 +703,7 @@ html.Div(
                         dcc.Graph(
                             id='tricep-graph',
                             className='wide-graph',
-                            figure=tricep_line
+                            figure=empty_fig
                         )
                     ]
                 ),
@@ -855,7 +774,7 @@ html.Div(
                         dcc.Graph(
                             id='shoulder-graph',
                             className='wide-graph',
-                            figure=shoulder_line
+                            figure=empty_fig
                         )
                     ]
                 ),
@@ -927,7 +846,7 @@ html.Div(
                         dcc.Graph(
                             id='calisthenics-graph',
                             className='wide-graph',
-                            figure=calisthenics_line
+                            figure=empty_fig
                         )
                     ]
                 ),
@@ -999,7 +918,7 @@ html.Div(
                         dcc.Graph(
                             id='ab-graph',
                             className='wide-graph',
-                            figure=ab_line
+                            figure=empty_fig
                         )
                     ]
                 ),
@@ -1070,7 +989,7 @@ html.Div(
                         dcc.Graph(
                             id='forearm-graph',
                             className='wide-graph',
-                            figure=forearm_line
+                            figure=empty_fig
                         )
                     ]
                 ),
@@ -1141,7 +1060,7 @@ html.Div(
                         dcc.Graph(
                             id='cardio-graph',
                             className='wide-graph',
-                            figure=cardio_line
+                            figure=empty_fig
                         )
                     ]
                 ),
@@ -1418,8 +1337,10 @@ def update_dashboard(selected_year):
     df_pull = df_long[df_long['Category'] == 'Pull'].reset_index(drop=True)
     pull_days = df_pull['Date'].nunique() if not df_pull.empty else 0
     pull_fig = make_line_chart(df_pull, f'Pull Progress Over Time - {selected_year}')
+
     df_pull_counts = df_pull['Exercise'].value_counts().reset_index()
     df_pull_counts.columns = ['Exercise', 'Count']
+
     pull_bar_fig = px.bar(
         df_pull_counts, 
         y="Exercise", 
@@ -1492,8 +1413,10 @@ def update_dashboard(selected_year):
     df_leg = df_long[df_long['Category'] == 'Leg'].reset_index(drop=True)
     leg_days = df_leg['Date'].nunique() if not df_leg.empty else 0
     leg_fig = make_line_chart(df_leg, f'Leg Progress Over Time - {selected_year}')
+
     df_leg_counts = df_leg['Exercise'].value_counts().reset_index()
     df_leg_counts.columns = ['Exercise', 'Count']
+
     leg_bar_fig = px.bar(
         df_leg_counts, 
         y="Exercise", 
@@ -1567,8 +1490,10 @@ def update_dashboard(selected_year):
     df_bicep = df_long[df_long['Category'] == 'Bicep'].reset_index(drop=True)
     bicep_days = df_bicep['Date'].nunique() if not df_bicep.empty else 0
     bicep_fig = make_line_chart(df_bicep, f'Bicep Progress Over Time - {selected_year}')
+
     df_bicep_counts = df_bicep['Exercise'].value_counts().reset_index()
     df_bicep_counts.columns = ['Exercise', 'Count']
+    
     bicep_bar_fig = px.bar(
         df_bicep_counts, 
         y="Exercise", 
@@ -1641,8 +1566,10 @@ def update_dashboard(selected_year):
     df_tricep = df_long[df_long['Category'] == 'Tricep'].reset_index(drop=True)
     tricep_days = df_tricep['Date'].nunique() if not df_tricep.empty else 0
     tricep_fig = make_line_chart(df_tricep, f'Tricep Progress Over Time - {selected_year}')
+
     df_tricep_counts = df_tricep['Exercise'].value_counts().reset_index()
     df_tricep_counts.columns = ['Exercise', 'Count']
+
     tricep_bar_fig = px.bar(
         df_tricep_counts, 
         y="Exercise", 
@@ -1715,8 +1642,10 @@ def update_dashboard(selected_year):
     df_shoulder = df_long[df_long['Category'] == 'Shoulder'].reset_index(drop=True)
     shoulder_days = df_shoulder['Date'].nunique() if not df_shoulder.empty else 0
     shoulder_fig = make_line_chart(df_shoulder, f'Shoulder Progress Over Time - {selected_year}')
+
     df_shoulder_counts = df_shoulder['Exercise'].value_counts().reset_index()
     df_shoulder_counts.columns = ['Exercise', 'Count']
+
     shoulder_bar_fig = px.bar(
         df_shoulder_counts, 
         y="Exercise", 
@@ -1789,8 +1718,10 @@ def update_dashboard(selected_year):
     df_ab = df_long[df_long['Category'] == 'Ab'].reset_index(drop=True)
     ab_days = df_ab['Date'].nunique() if not df_ab.empty else 0
     ab_fig = make_line_chart(df_ab, f'Ab Progress Over Time - {selected_year}')
+
     df_ab_counts = df_ab['Exercise'].value_counts().reset_index()
     df_ab_counts.columns = ['Exercise', 'Count']
+
     ab_bar_fig = px.bar(
         df_ab_counts, 
         y="Exercise", 
@@ -1863,8 +1794,10 @@ def update_dashboard(selected_year):
     df_calisthenics = df_long[df_long['Category'] == 'Calisthenics'].reset_index(drop=True)
     calisthenics_days = df_calisthenics['Date'].nunique() if not df_calisthenics.empty else 0
     calisthenics_fig = make_line_chart(df_calisthenics, f'Calisthenics Progress Over Time - {selected_year}')
+
     df_calisthenics_counts = df_calisthenics['Exercise'].value_counts().reset_index()
     df_calisthenics_counts.columns = ['Exercise', 'Count']
+
     calisthenics_bar_fig = px.bar(
         df_calisthenics_counts, 
         y="Exercise", 
@@ -1937,8 +1870,10 @@ def update_dashboard(selected_year):
     df_forearm = df_long[df_long['Category'] == 'Forearm'].reset_index(drop=True)
     forearm_days = df_forearm['Date'].nunique() if not df_forearm.empty else 0
     forearm_fig = make_line_chart(df_forearm, f'Forearm Progress Over Time - {selected_year}')
+
     df_forearm_counts = df_forearm['Exercise'].value_counts().reset_index()
     df_forearm_counts.columns = ['Exercise', 'Count']
+
     forearm_bar_fig = px.bar(
         df_forearm_counts, 
         y="Exercise", 
@@ -2011,8 +1946,10 @@ def update_dashboard(selected_year):
     df_cardio = df_long[df_long['Category'] == 'Cardio'].reset_index(drop=True)
     cardio_days = df_cardio['Date'].nunique() if not df_cardio.empty else 0
     cardio_fig = make_line_chart(df_cardio, f'Cardio Progress Over Time - {selected_year}')
+
     df_cardio_counts = df_cardio['Exercise'].value_counts().reset_index()
     df_cardio_counts.columns = ['Exercise', 'Count']
+
     cardio_bar_fig = px.bar(
         df_cardio_counts, 
         y="Exercise", 
