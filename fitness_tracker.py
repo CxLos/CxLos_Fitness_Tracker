@@ -329,7 +329,7 @@ push_pie = px.pie(
         color='black'
     )
 ).update_traces(
-    rotation=100,
+    rotation=0,
     # textinfo='value+percent',
     texttemplate='%{percent:.1%}',
     hovertemplate='<b>%{label}</b>: %{value}<extra></extra>'
