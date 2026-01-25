@@ -1,1 +1,1 @@
-web: gunicorn fitness_tracker:server
+web: gunicorn cxlos_fitness_tracker:server
