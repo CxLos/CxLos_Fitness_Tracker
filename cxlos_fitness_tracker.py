@@ -31,7 +31,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 
 report_month = datetime(2026, 1, 1).strftime("%B")
 report_year = datetime(2026, 1, 1).strftime("%Y")
-name = "Carlos"
+name = "CxLos"
 
 # Define the Google Sheets URL
 sheet_url = "https://docs.google.com/spreadsheets/d/1EXDabqzS1Gd1AteSqcovvUuJxrUMQvisf_MhnhFMeNk/edit?gid=0#gid=0"
@@ -230,14 +230,6 @@ def make_line_chart(df_cat: pd.DataFrame, title: str) -> go.Figure:
 empty_fig = go.Figure()
 empty_fig.update_layout(title=dict(text='Please Select a Year', x=0.5, font=dict(size=20)))
 
-# Prepare initial table data using the already loaded df_long
-df_indexed = df_long.reset_index(drop=True).copy()
-column_order = ['Date', 'Category', 'Exercise', 'Weight']
-df_indexed = df_indexed[column_order]
-df_indexed.insert(0, '#', df_indexed.index + 1)
-data = df_indexed.to_dict('records')
-columns = [{"name": col, "id": col} for col in df_indexed.columns]
-
 # ========================== DataFrame Table ========================== #
 
 # create a display index column and prepare table data/columns
@@ -265,7 +257,7 @@ app.layout = html.Div(
             className='divv', 
             children=[ 
                 html.H1(
-                    f"CxLos Fitness Tracker",  
+                    f"{name} Fitness Tracker",  
                     className='title'),
                 html.H1(
                     id='year-subtitle',
@@ -301,7 +293,7 @@ app.layout = html.Div(
                     children=[
                         html.A(
                             'Repo',
-                            href=f'https://github.com/CxLos/CxLos_Fitness_Tracker',
+                            href=f'https://github.com/CxLos/{name}_Fitness_Tracker',
                             className='btn'
                         ),
                     ]
@@ -1310,12 +1302,6 @@ def update_dashboard(selected_year):
 
     df_push_counts = df_push['Exercise'].value_counts().reset_index()
     df_push_counts.columns = ['Exercise', 'Count']
-
-    # Add debug logging around line 1053:
-    print(f"📊 df_push_counts shape: {df_push_counts.shape}")
-    print(f"📊 df_push_counts:\n{df_push_counts}")
-    print(f"📊 Unique exercises: {df_push_counts['Exercise'].unique()}")
-    print(f"📊 Exercise dtypes: {df_push_counts['Exercise'].dtype}")
 
     push_bar_fig = px.bar(
         df_push_counts, 
