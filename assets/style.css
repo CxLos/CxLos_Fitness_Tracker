@@ -552,6 +552,57 @@ html, body {
   white-space: nowrap; 
 } */
 
+/* =================== Dropdown Styling =================== */
+
+/* .dropdown-container:hover {
+  cursor: pointer;
+} */
+
+/* Main dropdown control */
+.Select-control,
+.Select-control:hover,
+#year-dropdown,
+div[id="year-dropdown"],
+div[id="year-dropdown"] > div {
+  cursor: pointer !important;
+}
+
+/* Dropdown menu container */
+.Select-menu-outer {
+  background-color: rgb(253, 180, 180) !important;
+  border: 3px solid rgb(217, 24, 24) !important;
+  border-radius: 10px !important;
+}
+
+/* Individual dropdown options */
+.Select-option {
+  background-color: rgb(253, 180, 180) !important;
+  color: rgb(217, 24, 24) !important;
+  font-weight: bold !important;
+  padding: 8px 12px !important;
+}
+
+/* Hovered option */
+.Select-option.is-focused,
+.Select-option:hover {
+  background-color: rgb(217, 24, 24) !important;
+  color: white !important;
+}
+
+/* Selected option */
+.Select-option.is-selected {
+  background-color: rgb(217, 24, 24) !important;
+  color: white !important;
+  font-weight: bold !important;
+}
+
+/* Additional selectors for newer Dash versions */
+div[class*="option"]:hover,
+div[data-value]:hover {
+  background-color: rgb(217, 24, 24) !important;
+  color: white !important;
+}
+
 /* ================ Media Screen ================ */
 
 @media (max-width: 900px) {
@@ -688,55 +739,4 @@ html, body {
   .js-plotly-plot .legend .traces text {
     font-size: 10px !important;
   }
-}
-
-/* =================== Dropdown Styling =================== */
-
-/* .dropdown-container:hover {
-  cursor: pointer;
-} */
-
-/* Main dropdown control */
-.Select-control,
-.Select-control:hover,
-#year-dropdown,
-div[id="year-dropdown"],
-div[id="year-dropdown"] > div {
-  cursor: pointer !important;
-}
-
-/* Dropdown menu container */
-.Select-menu-outer {
-  background-color: rgb(253, 180, 180) !important;
-  border: 3px solid rgb(217, 24, 24) !important;
-  border-radius: 10px !important;
-}
-
-/* Individual dropdown options */
-.Select-option {
-  background-color: rgb(253, 180, 180) !important;
-  color: rgb(217, 24, 24) !important;
-  font-weight: bold !important;
-  padding: 8px 12px !important;
-}
-
-/* Hovered option */
-.Select-option.is-focused,
-.Select-option:hover {
-  background-color: rgb(217, 24, 24) !important;
-  color: white !important;
-}
-
-/* Selected option */
-.Select-option.is-selected {
-  background-color: rgb(217, 24, 24) !important;
-  color: white !important;
-  font-weight: bold !important;
-}
-
-/* Additional selectors for newer Dash versions */
-div[class*="option"]:hover,
-div[data-value]:hover {
-  background-color: rgb(217, 24, 24) !important;
-  color: white !important;
 }

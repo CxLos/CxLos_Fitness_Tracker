@@ -1,4 +1,3 @@
-
 # =================================== IMPORTS ================================= #
 
 import numpy as np 
@@ -35,8 +34,7 @@ report_year = datetime(2026, 1, 1).strftime("%Y")
 name = "CxLos"
 
 # Define the Google Sheets URL
-# sheet_url = "https://docs.google.com/spreadsheets/d/1EXDabqzS1Gd1AteSqcovvUuJxrUMQvisf_MhnhFMeNk/edit?gid=0#gid=0"
-sheet_url = "https://docs.google.com/spreadsheets/d/1X5ZQo9OmAwQFsiBaxRoH8-L3kGrjDt20Em7W3NYb2qI/edit?resourcekey=&gid=1791797530#gid=1791797530"
+sheet_url = "https://docs.google.com/spreadsheets/d/1EXDabqzS1Gd1AteSqcovvUuJxrUMQvisf_MhnhFMeNk/edit?gid=0#gid=0"
 
 # Define the scope
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -68,33 +66,37 @@ sheet = client.open_by_url(sheet_url)
 
 # ============================== Data Loading Function ========================== #
 
-
 def load_data_for_year(year):
-    """Load and process fitness data for a specific year from a single-sheet spreadsheet"""
+    """Load and process fitness data for a specific year or all years"""
     try:
-        # Load all data from the first sheet
-        data = pd.DataFrame(client.open_by_url(sheet_url).sheet1.get_all_records())
-        df_loaded = data.copy()
-        # Trim leading and trailing whitespaces from column names
-        df_loaded.columns = df_loaded.columns.str.strip()
-        # Convert 'Date of Activity' to datetime
-        df_loaded["Date"] = pd.to_datetime(df_loaded["Date"], errors='coerce')
-        # If year is 'All Time', return all data
+        # print(f"📊 Loading data for year: {year}")
+        
         if year == 'All Time':
-            filtered_df = df_loaded.copy()
+            all_years = ['2026']
+            dfs = []
+            for yr in all_years:
+                try:
+                    worksheet = sheet.worksheet(f"{yr}")
+                    data = pd.DataFrame(worksheet.get_all_records())
+                    # print(f"✅ Loaded {len(data)} rows for {yr}")
+                    dfs.append(data)
+                except Exception as e:
+                    print(f"⚠️ Worksheet {yr} not found: {str(e)}")
+                    continue
+            
+            if dfs:
+                combined_df = pd.concat(dfs, ignore_index=True)
+                # print(f"✅ Combined total: {len(combined_df)} rows")
+                return combined_df.copy()
+            else:
+                print("❌ No data found for All Time")
+                return pd.DataFrame()
         else:
-            # Filter by year (as int)
-            try:
-                year_int = int(year)
-            except Exception:
-                year_int = pd.Timestamp.now().year
-            filtered_df = df_loaded[df_loaded['Date'].dt.year == year_int]
-        # Sort by date
-        filtered_df = filtered_df.sort_values(by='Date', ascending=True)
-        # Strip whitespace from string entries in the whole DataFrame
-        for col in filtered_df.select_dtypes(include='object').columns:
-            filtered_df[col] = filtered_df[col].map(lambda x: x.strip() if isinstance(x, str) else x)
-        return filtered_df.copy()
+            worksheet = sheet.worksheet(f"{year}")
+            data = pd.DataFrame(worksheet.get_all_records())
+            # print(f"✅ Loaded {len(data)} rows for {year}")
+            return data.copy()
+            
     except Exception as e:
         print(f"❌ ERROR loading data for {year}: {str(e)}")
         import traceback
@@ -106,11 +108,13 @@ df = load_data_for_year('All Time')
 
 # -------------------------------------------------
 # print(df.head())
-# print('Total Workouts: ', len(df))
+# print(df[["Date of Activity", "Total travel time (minutes):"]])
+# print('Total Marketing Events: ', len(df))
 # print('Column Names: \n', df.columns.tolist())
 # print('DF Shape:', df.shape)
 # print('Dtypes: \n', df.dtypes)
 # print('Info:', df.info())
+# print("Amount of duplicate rows:", df.duplicated().sum())
 # print('Current Directory:', current_dir)
 # print('Script Directory:', script_dir)
 # print('Path to data:',file_path)
@@ -118,7 +122,7 @@ df = load_data_for_year('All Time')
 # ================================= Columns ================================= #
 
 columns =  [
-'Timestamp', 'Date', 'Push Exercise', 'Triceps Exercise', 'Pull Exercise', 'Leg Exercise', 'Bicep Exercise', 'Shoulder Exercise', 'Forearm Exercise', 'Abs Exercise', 'Calisthenics Exercise', 'Cardio Exercise', 'Weight', 'Set 1', 'Set 2', 'Set 3', 'Set 4', 'Set 5', 'Time', 'Distance', 'Floors', 'Calories'
+
 ]
 
 # =============================== Missing Values ============================ #
@@ -131,70 +135,81 @@ columns =  [
 
 # ============================== Data Preprocessing ========================== #
 
+# Get all date columns (everything except Category and Exercise)
+date_columns = [col for col in df.columns if col not in ['Category', 'Exercise']]
+
+# Reshape from wide to long format
+df_long = df.melt(
+    id_vars=['Category', 'Exercise'],  # columns to keep
+    value_vars=date_columns,  # columns to melt into rows
+    var_name='Date',        # New column name
+    value_name='Weight'     # New column name for cell values
+)
+
+# Remove rows where Date contains common non-date values
+# df_long = df_long[~df_long['Date'].astype(str).str.contains(r'Int\.|Unnamed|#', case=False, na=False)]
+
+# Convert Date to datetime with format specification
+df_long['Date'] = pd.to_datetime(df_long['Date'], errors='coerce', format='mixed')
+
+# Remove rows with invalid dates (NaT)
+df_long = df_long.dropna(subset=['Date'])
+
+# Sort by date
+df_long = df_long.sort_values('Date')
+
+# Convert Weight to numeric BEFORE creating charts
+df_long['Weight'] = pd.to_numeric(df_long['Weight'], errors='coerce')
+
+# Remove rows with NaN weights
+df_long = df_long.dropna(subset=['Weight'])
+df_long = df_long[df_long['Weight'].notna()]
+df_long = df_long[df_long['Weight'] != '']  # Remove empty strings
+
+# Strip whitespace from string columns and convert to string type explicitly
+df_long['Category'] = df_long['Category'].astype(str).str.strip()
+df_long['Exercise'] = df_long['Exercise'].astype(str).str.strip()
+
+# Remove duplicate rows (same exercise on same date)
+df_long = df_long.drop_duplicates(subset=['Category', 'Exercise', 'Date'], keep='first')
+
+# Reset index to avoid grouping issues in Plotly
+df_long = df_long.reset_index(drop=True)
+
+# Ensure all columns have the correct explicit types for pandas 3.0 compatibility
+df_long['Category'] = df_long['Category'].astype('object')
+df_long['Exercise'] = df_long['Exercise'].astype('object')
+df_long['Date'] = pd.to_datetime(df_long['Date'])
+df_long['Weight'] = df_long['Weight'].astype('float64')
+
 # print("Melted DataFrame: \n", df_long.head(10))
 
-# ============================== Line Chart ========================== #
-
 # Helper to build line charts without relying on Plotly Express grouping
-def make_line_chart(df_cat: pd.DataFrame, title: str, exercise_col: str) -> go.Figure:
+def make_line_chart(df_cat: pd.DataFrame, title: str) -> go.Figure:
     fig = go.Figure()
 
     if df_cat.empty:
         fig.update_layout(title=dict(text=title, x=0.5, xanchor='center', font=dict(size=20)))
         return fig
 
-    # Cardio logic: use correct metric for each exercise
-    if exercise_col == 'Cardio Exercise':
-        cardio_metric_map = {
-            'Bike': ('Distance', 'Miles'),
-            'Indoor Run': ('Distance', 'Miles'),
-            'Outdoor Run': ('Distance', 'Miles'),
-            'Stair Master': ('Floors', 'Floors')
-        }
-        for exercise_name, sub in df_cat.groupby(exercise_col):
-            metric_col, unit = cardio_metric_map.get(exercise_name, ('Distance', 'Value'))
-            sub_sorted = sub.sort_values('Date')
-            if metric_col in sub_sorted:
-                fig.add_trace(
-                    go.Scatter(
-                        x=sub_sorted['Date'],
-                        y=sub_sorted[metric_col],
-                        mode='lines+markers',
-                        name=f'{exercise_name} ({unit})',
-                        hovertemplate=f'Exercise: <b>%{{fullData.name}}</b><br>Date: <b>%{{x|%m/%d/%Y}}</b><br>{unit}: <b>%{{y}}</b><extra></extra>',
-                    )
-                )
-        yaxis_title = 'Miles / Floors'
-    else:
-        for exercise_name, sub in df_cat.groupby(exercise_col):
-            sub_sorted = sub.sort_values('Date')
-            # Build hovertemplate with Set 1-5 if present
-            set_cols = [col for col in ['Set 1', 'Set 2', 'Set 3', 'Set 4', 'Set 5'] if col in sub_sorted.columns]
-            set_template = ''.join([f'<br>{col}: <b>%{{customdata[{i}]}}</b>' for i, col in enumerate(set_cols)])
-            hovertemplate = (
-                f'Exercise: <b>%{{fullData.name}}</b>'
-                f'<br>Date: <b>%{{x|%m/%d/%Y}}</b>'
-                f'<br>Weight: <b>%{{y}} lbs.</b>'
-                f'{set_template}'
-                '<extra></extra>'
+    for exercise_name, sub in df_cat.groupby('Exercise'):
+        # print("exercise_name:", exercise_name)
+        # print(sub.head(), "\n")
+        sub_sorted = sub.sort_values('Date')
+        fig.add_trace(
+            go.Scatter(
+                x=sub_sorted['Date'],
+                y=sub_sorted['Weight'],
+                mode='lines+markers',
+                name=str(exercise_name),
+                hovertemplate='Exercise: <b>%{fullData.name}</b><br>Date: <b>%{x|%m/%d/%Y}</b><br>Weight: <b>%{y} lbs.</b><extra></extra>',
             )
-            customdata = sub_sorted[set_cols].values if set_cols else None
-            fig.add_trace(
-                go.Scatter(
-                    x=sub_sorted['Date'],
-                    y=sub_sorted['Weight'],
-                    mode='lines+markers',
-                    name=str(exercise_name),
-                    hovertemplate=hovertemplate,
-                    customdata=customdata
-                )
-            )
-        yaxis_title = 'Weight (lbs)'
+        )
 
     fig.update_layout(
         title=dict(text=title, x=0.5, xanchor='center', font=dict(size=20)),
         xaxis=dict(tickformat='%m/%d/%Y', title='Date'),
-        yaxis=dict(title=yaxis_title),
+        yaxis=dict(title='Weight (lbs)'),
         hovermode='closest',
         font=dict(size=12),
         showlegend=True,
@@ -218,11 +233,11 @@ empty_fig.update_layout(title=dict(text='Please Select a Year', x=0.5, font=dict
 # ========================== DataFrame Table ========================== #
 
 # create a display index column and prepare table data/columns
-df_indexed = df.reset_index(drop=True).copy()
+df_indexed = df_long.reset_index(drop=True).copy()
 
 # Reorder columns: Date first, then the rest
-# column_order = ['Date', 'Category', 'Exercise', 'Weight']
-# df_indexed = df_indexed[column_order]
+column_order = ['Date', 'Category', 'Exercise', 'Weight']
+df_indexed = df_indexed[column_order]
 
 # Insert '#' as the first column (1-based row numbers)
 df_indexed.insert(0, '#', df_indexed.index + 1)
@@ -1103,8 +1118,8 @@ html.Div(
             
             dash_table.DataTable(
                 id='applications-table',
-                data=[], # type: ignore
-                columns=[], # type: ignore
+                data=data, # type: ignore
+                columns=columns, # type: ignore
                 page_size=20,
                 sort_action='native',
                 filter_action='native',
@@ -1215,18 +1230,9 @@ html.Div(
 )
 def update_dashboard(selected_year):
 
-    # If no year is selected, show empty dashboard
+    # Handle None (no selection yet) - this is the key fix
     if selected_year is None:
-        return (
-            '',  # year_subtitle
-            '',  # rollup_title
-            '-',  # total
-            *[''] * 20,  # All other text outputs
-            *[empty_fig] * 30,  # All graph outputs
-            '',  # table_title
-            [],  # table_data
-            []   # table_columns
-        )
+        selected_year = 'All Time'
 
     try:
         print(f"🔄 Callback triggered for year: {selected_year}")
@@ -1257,119 +1263,134 @@ def update_dashboard(selected_year):
     # Load data for selected year
     df_year = load_data_for_year(selected_year)
     
-# Filter and select columns for each muscle group
-    df_push = df_year[['Date', 'Push Exercise', 'Weight', 'Set 1', 'Set 2', 'Set 3', 'Set 4', 'Set 5']].dropna(subset=['Push Exercise'])
-    df_triceps = df_year[['Date', 'Triceps Exercise', 'Weight', 'Set 1', 'Set 2', 'Set 3', 'Set 4', 'Set 5']].dropna(subset=['Triceps Exercise'])
-    df_pull = df_year[['Date', 'Pull Exercise', 'Weight', 'Set 1', 'Set 2', 'Set 3', 'Set 4', 'Set 5']].dropna(subset=['Pull Exercise'])
-    df_leg = df_year[['Date', 'Leg Exercise', 'Weight', 'Set 1', 'Set 2', 'Set 3', 'Set 4', 'Set 5']].dropna(subset=['Leg Exercise'])
-    df_bicep = df_year[['Date', 'Bicep Exercise', 'Weight', 'Set 1', 'Set 2', 'Set 3', 'Set 4', 'Set 5']].dropna(subset=['Bicep Exercise'])
-    df_shoulder = df_year[['Date', 'Shoulder Exercise', 'Weight', 'Set 1', 'Set 2', 'Set 3', 'Set 4', 'Set 5']].dropna(subset=['Shoulder Exercise'])
-    df_forearm = df_year[['Date', 'Forearm Exercise', 'Weight', 'Set 1', 'Set 2', 'Set 3', 'Set 4', 'Set 5']].dropna(subset=['Forearm Exercise'])
-    df_abs = df_year[['Date', 'Abs Exercise', 'Weight', 'Set 1', 'Set 2', 'Set 3', 'Set 4', 'Set 5']].dropna(subset=['Abs Exercise'])
-    df_calisthenics = df_year[['Date', 'Calisthenics Exercise', 'Weight', 'Set 1', 'Set 2', 'Set 3', 'Set 4', 'Set 5']].dropna(subset=['Calisthenics Exercise'])
-    df_cardio = df_year[['Date', 'Cardio Exercise', 'Time', 'Distance', 'Floors', 'Calories']].dropna(subset=['Cardio Exercise'])
-
-    df_push = df_push[df_push['Push Exercise'].str.strip() != '']
-    df_pull = df_pull[df_pull['Pull Exercise'].str.strip() != '']
-    df_leg = df_leg[df_leg['Leg Exercise'].str.strip() != '']
-    df_bicep = df_bicep[df_bicep['Bicep Exercise'].str.strip() != '']
-    df_triceps = df_triceps[df_triceps['Triceps Exercise'].str.strip() != '']
-    df_shoulder = df_shoulder[df_shoulder['Shoulder Exercise'].str.strip() != '']
-    df_abs = df_abs[df_abs['Abs Exercise'].str.strip() != '']
-    df_forearm = df_forearm[df_forearm['Forearm Exercise'].str.strip() != '']
-    df_calisthenics = df_calisthenics[df_calisthenics['Calisthenics Exercise'].str.strip() != '']
-    df_cardio = df_cardio[df_cardio['Cardio Exercise'].str.strip() != '']
-
+    # Get all date columns (everything except Category and Exercise)
+    date_columns = [col for col in df_year.columns if col not in ['Category', 'Exercise']]
+    
+    # Reshape from wide to long format
+    df_long = df_year.melt(
+        id_vars=['Category', 'Exercise'],
+        value_vars=date_columns,
+        var_name='Date',
+        value_name='Weight'
+    )
+    
+    # Convert Date to datetime with format specification
+    df_long['Date'] = pd.to_datetime(df_long['Date'], errors='coerce', format='mixed')
+    df_long = df_long.sort_values('Date')
+    
+    # Convert Weight to numeric
+    df_long['Weight'] = pd.to_numeric(df_long['Weight'], errors='coerce')
+    
+    # Remove rows with NaN weights
+    df_long = df_long.dropna(subset=['Weight'])
+    df_long = df_long[df_long['Weight'].notna()]
+    df_long = df_long[df_long['Weight'] != '']
+    
+    # Strip whitespace
+    df_long['Category'] = df_long['Category'].astype(str).str.strip()
+    df_long['Exercise'] = df_long['Exercise'].astype(str).str.strip()
+    
+    # Remove duplicates
+    df_long = df_long.drop_duplicates(subset=['Category', 'Exercise', 'Date'], keep='first')
+    df_long = df_long.reset_index(drop=True)
+    
+    # Ensure correct types
+    df_long['Category'] = df_long['Category'].astype('object')
+    df_long['Exercise'] = df_long['Exercise'].astype('object')
+    df_long['Date'] = pd.to_datetime(df_long['Date'])
+    df_long['Weight'] = df_long['Weight'].astype('float64')
+    
     # Calculate total unique gym days (unique dates)
-    total = df_year['Date'].nunique()
+    total = df_long['Date'].nunique()
     
     # Create graphs for each category
-
+    df_push = df_long[df_long['Category'] == 'Push'].reset_index(drop=True)
     push_days = df_push['Date'].nunique() if not df_push.empty else 0
-    push_fig = make_line_chart(df_push, f'Push Progress Over Time - {selected_year}',"Push Exercise")
-    print("Push DF: \n", df_push)
+    push_fig = make_line_chart(df_push, f'Push Progress Over Time - {selected_year}')
 
-    df_push_counts = df_push['Push Exercise'].value_counts().reset_index()
-    df_push_counts.columns = ['Push Exercise', 'Count']
+    df_push_counts = df_push['Exercise'].value_counts().reset_index()
+    df_push_counts.columns = ['Exercise', 'Count']
 
     push_bar_fig = px.bar(
-        df_push_counts,
-        y="Push Exercise",
-        x='Count',
-        color="Push Exercise",
-        text='Count',
-        orientation='h'
+        df_push_counts, 
+        y="Exercise", 
+        x='Count', 
+        color="Exercise", 
+        text='Count', 
+        orientation='h',
+        # color_discrete_sequence=px.colors.qualitative.Vivid
     ).update_layout(
         title=dict(
-            text=f'Push Exercise Bar Chart - {selected_year}',
-            x=0.5,
-            font=dict(size=21,
-            family='Calibri',
+            text=f'Push Exercise Bar Chart - {selected_year}', 
+            x=0.5, 
+            font=dict(size=21, 
+            family='Calibri', 
             color='black')
-        ),
+        ), 
         font=dict(
             family='Calibri',
-            size=16,
+            size=16, 
             color='black'
-        ),
+        ), 
         yaxis=dict(
-            tickfont=dict(size=16),
+            tickfont=dict(size=16), 
             title=dict(
-                text="Push Exercise",
+                text="Exercise", 
                 font=dict(size=16)
             )
-        ),
+        ), 
         xaxis=dict(
             title=dict(
-                text='Count',
+                text='Count', 
                 font=dict(size=16)
             )
-        ),
-        legend=dict(visible=False),
-        hovermode='closest',
-        bargap=0.08,
+        ), 
+        legend=dict(visible=False), 
+        hovermode='closest', 
+        bargap=0.08, 
         bargroupgap=0
     ).update_traces(
-        textposition='auto',
-        hovertemplate='<b>Push Exercise:</b> %{y}<br><b>Count</b>: %{x}<extra></extra>'
+        textposition='auto', 
+        hovertemplate='<b>Exercise:</b> %{label}<br><b>Count</b>: %{x}<extra></extra>'
     )
 
     push_pie_fig = px.pie(
-        df_push_counts,
-        names="Push Exercise",
+        df_push_counts, 
+        names="Exercise", 
         values='Count'
     ).update_layout(
         title=dict(
             text=f'Push Exercise Distribution - {selected_year}',
-            x=0.5,
+            x=0.5, 
             font=dict(
                 size=21,
-                family='Calibri',
+                family='Calibri', 
                 color='black'
             )
-        ),
+        ), 
         font=dict(
             family='Calibri',
-            size=16,
+            size=16, 
             color='black'
         )
     ).update_traces(
-        rotation=100,
-        texttemplate='%{percent:.1%}',
-        hovertemplate='<b>Push Exercise:</b> %{label}<br><b>Count</b>: %{value}<extra></extra>'
+        rotation=100, 
+        texttemplate='%{percent:.1%}', 
+        hovertemplate='<b>Exercise:</b> %{y}<br><b>Count</b>: %{x}<extra></extra>' 
     )
     
+    df_pull = df_long[df_long['Category'] == 'Pull'].reset_index(drop=True)
     pull_days = df_pull['Date'].nunique() if not df_pull.empty else 0
-    pull_fig = make_line_chart(df_pull, f'Pull Progress Over Time - {selected_year}',"Pull Exercise")
+    pull_fig = make_line_chart(df_pull, f'Pull Progress Over Time - {selected_year}')
 
-    df_pull_counts = df_pull['Pull Exercise'].value_counts().reset_index()
-    df_pull_counts.columns = ['Pull Exercise', 'Count']
+    df_pull_counts = df_pull['Exercise'].value_counts().reset_index()
+    df_pull_counts.columns = ['Exercise', 'Count']
 
     pull_bar_fig = px.bar(
         df_pull_counts, 
-        y="Pull Exercise", 
+        y="Exercise", 
         x='Count', 
-        color="Pull Exercise", 
+        color="Exercise", 
         text='Count', 
         orientation='h'
     ).update_layout(
@@ -1390,7 +1411,7 @@ def update_dashboard(selected_year):
         yaxis=dict(
             tickfont=dict(size=16), 
             title=dict(
-                text="Pull Exercise", 
+                text="Exercise", 
                 font=dict(size=16)
             )
         ), 
@@ -1406,12 +1427,12 @@ def update_dashboard(selected_year):
         bargroupgap=0
     ).update_traces(
         textposition='auto', 
-        hovertemplate='<b>Pull Exercise:</b> %{y}<br><b>Count</b>: %{x}<extra></extra>'
+        hovertemplate='<b>Exercise:</b> %{label}<br><b>Count</b>: %{x}<extra></extra>'
     )
 
     pull_pie_fig = px.pie(
         df_pull_counts, 
-        names="Pull Exercise", 
+        names="Exercise", 
         values='Count'
     ).update_layout(
         title=dict(
@@ -1431,20 +1452,21 @@ def update_dashboard(selected_year):
     ).update_traces(
         rotation=100, 
         texttemplate='%{percent:.1%}', 
-        hovertemplate='<b>Pull Exercise:</b> %{label}<br><b>Count</b>: %{value}<extra></extra>'
+        hovertemplate='<b>%{label}</b>: %{value}<extra></extra>'
     )
     
+    df_leg = df_long[df_long['Category'] == 'Leg'].reset_index(drop=True)
     leg_days = df_leg['Date'].nunique() if not df_leg.empty else 0
-    leg_fig = make_line_chart(df_leg, f'Leg Progress Over Time - {selected_year}', "Leg Exercise")
+    leg_fig = make_line_chart(df_leg, f'Leg Progress Over Time - {selected_year}')
 
-    df_leg_counts = df_leg['Leg Exercise'].value_counts().reset_index()
-    df_leg_counts.columns = ['Leg Exercise', 'Count']
+    df_leg_counts = df_leg['Exercise'].value_counts().reset_index()
+    df_leg_counts.columns = ['Exercise', 'Count']
 
     leg_bar_fig = px.bar(
         df_leg_counts, 
-        y="Leg Exercise", 
+        y="Exercise", 
         x='Count', 
-        color="Leg Exercise", 
+        color="Exercise", 
         text='Count', 
         orientation='h'
     ).update_layout(
@@ -1465,7 +1487,7 @@ def update_dashboard(selected_year):
         yaxis=dict(
             tickfont=dict(size=16), 
             title=dict(
-                text="Leg Exercise", 
+                text="Exercise", 
                 font=dict(size=16)
             )
         ), 
@@ -1481,12 +1503,12 @@ def update_dashboard(selected_year):
         bargroupgap=0
     ).update_traces(
         textposition='auto', 
-        hovertemplate='<b>Leg Exercise:</b> %{y}<br><b>Count</b>: %{x}<extra></extra>'
+        hovertemplate='<b>Exercise:</b> %{label}<br><b>Count</b>: %{x}<extra></extra>'
     )
 
     leg_pie_fig = px.pie(
         df_leg_counts, 
-        names="Leg Exercise", 
+        names="Exercise", 
         values='Count'
     ).update_layout(
         title=dict(
@@ -1506,21 +1528,22 @@ def update_dashboard(selected_year):
     ).update_traces(
         rotation=100, 
         texttemplate='%{percent:.1%}', 
-        hovertemplate='<b>Leg Exercise:</b> %{label}<br><b>Count</b>: %{value}<extra></extra>'
+        hovertemplate='<b>%{label}</b>: %{value}<extra></extra>'
     )
     
     # Calculate bicep days
+    df_bicep = df_long[df_long['Category'] == 'Bicep'].reset_index(drop=True)
     bicep_days = df_bicep['Date'].nunique() if not df_bicep.empty else 0
-    bicep_fig = make_line_chart(df_bicep, f'Bicep Progress Over Time - {selected_year}', "Bicep Exercise")
+    bicep_fig = make_line_chart(df_bicep, f'Bicep Progress Over Time - {selected_year}')
 
-    df_bicep_counts = df_bicep['Bicep Exercise'].value_counts().reset_index()
-    df_bicep_counts.columns = ['Bicep Exercise', 'Count']
+    df_bicep_counts = df_bicep['Exercise'].value_counts().reset_index()
+    df_bicep_counts.columns = ['Exercise', 'Count']
     
     bicep_bar_fig = px.bar(
         df_bicep_counts, 
-        y="Bicep Exercise", 
+        y="Exercise", 
         x='Count', 
-        color="Bicep Exercise", 
+        color="Exercise", 
         text='Count', 
         orientation='h'
     ).update_layout(
@@ -1562,7 +1585,7 @@ def update_dashboard(selected_year):
 
     bicep_pie_fig = px.pie(
         df_bicep_counts, 
-        names="Bicep Exercise", 
+        names="Exercise", 
         values='Count'
     ).update_layout(
         title=dict(
@@ -1585,22 +1608,23 @@ def update_dashboard(selected_year):
         hovertemplate='<b>%{label}</b>: %{value}<extra></extra>'
     )
     
-    tricep_days = df_triceps['Date'].nunique() if not df_triceps.empty else 0
-    tricep_fig = make_line_chart(df_triceps, f'Triceps Progress Over Time - {selected_year}', "Triceps Exercise")
+    df_tricep = df_long[df_long['Category'] == 'Tricep'].reset_index(drop=True)
+    tricep_days = df_tricep['Date'].nunique() if not df_tricep.empty else 0
+    tricep_fig = make_line_chart(df_tricep, f'Tricep Progress Over Time - {selected_year}')
 
-    df_tricep_counts = df_triceps['Triceps Exercise'].value_counts().reset_index()
-    df_tricep_counts.columns = ['Triceps Exercise', 'Count']
+    df_tricep_counts = df_tricep['Exercise'].value_counts().reset_index()
+    df_tricep_counts.columns = ['Exercise', 'Count']
 
     tricep_bar_fig = px.bar(
         df_tricep_counts, 
-        y="Triceps Exercise", 
+        y="Exercise", 
         x='Count', 
-        color="Triceps Exercise", 
+        color="Exercise", 
         text='Count', 
         orientation='h'
     ).update_layout(
         title=dict(
-            text=f'Triceps Exercise Bar Chart - {selected_year}', 
+            text=f'Tricep Exercise Bar Chart - {selected_year}', 
             x=0.5, 
             font=dict(
                 size=21, 
@@ -1637,11 +1661,11 @@ def update_dashboard(selected_year):
 
     tricep_pie_fig = px.pie(
         df_tricep_counts, 
-        names="Triceps Exercise", 
+        names="Exercise", 
         values='Count'
     ).update_layout(
         title=dict(
-            text=f'Triceps Exercise Distribution - {selected_year}',
+            text=f'Tricep Exercise Distribution - {selected_year}',
             x=0.5, 
             font=dict(
                 size=21,
@@ -1660,17 +1684,18 @@ def update_dashboard(selected_year):
         hovertemplate='<b>%{label}</b>: %{value}<extra></extra>'
     )
     
+    df_shoulder = df_long[df_long['Category'] == 'Shoulder'].reset_index(drop=True)
     shoulder_days = df_shoulder['Date'].nunique() if not df_shoulder.empty else 0
-    shoulder_fig = make_line_chart(df_shoulder, f'Shoulder Progress Over Time - {selected_year}', "Shoulder Exercise")
+    shoulder_fig = make_line_chart(df_shoulder, f'Shoulder Progress Over Time - {selected_year}')
 
-    df_shoulder_counts = df_shoulder['Shoulder Exercise'].value_counts().reset_index()
-    df_shoulder_counts.columns = ['Shoulder Exercise', 'Count']
+    df_shoulder_counts = df_shoulder['Exercise'].value_counts().reset_index()
+    df_shoulder_counts.columns = ['Exercise', 'Count']
 
     shoulder_bar_fig = px.bar(
         df_shoulder_counts, 
-        y="Shoulder Exercise", 
+        y="Exercise", 
         x='Count', 
-        color="Shoulder Exercise", 
+        color="Exercise", 
         text='Count', 
         orientation='h'
     ).update_layout(
@@ -1712,7 +1737,7 @@ def update_dashboard(selected_year):
 
     shoulder_pie_fig = px.pie(
         df_shoulder_counts, 
-        names="Shoulder Exercise", 
+        names="Exercise", 
         values='Count'
     ).update_layout(
         title=dict(
@@ -1735,22 +1760,23 @@ def update_dashboard(selected_year):
         hovertemplate='<b>%{label}</b>: %{value}<extra></extra>'
     )
     
-    ab_days = df_abs['Date'].nunique() if not df_abs.empty else 0
-    ab_fig = make_line_chart(df_abs, f'Abs Progress Over Time - {selected_year}', "Abs Exercise")
+    df_ab = df_long[df_long['Category'] == 'Ab'].reset_index(drop=True)
+    ab_days = df_ab['Date'].nunique() if not df_ab.empty else 0
+    ab_fig = make_line_chart(df_ab, f'Ab Progress Over Time - {selected_year}')
 
-    df_ab_counts = df_abs['Abs Exercise'].value_counts().reset_index()
-    df_ab_counts.columns = ['Abs Exercise', 'Count']
+    df_ab_counts = df_ab['Exercise'].value_counts().reset_index()
+    df_ab_counts.columns = ['Exercise', 'Count']
 
     ab_bar_fig = px.bar(
         df_ab_counts, 
-        y="Abs Exercise", 
+        y="Exercise", 
         x='Count', 
-        color="Abs Exercise", 
+        color="Exercise", 
         text='Count', 
         orientation='h'
     ).update_layout(
         title=dict(
-            text=f'Abs Exercise Bar Chart - {selected_year}', 
+            text=f'Ab Exercise Bar Chart - {selected_year}', 
             x=0.5, 
             font=dict(
                 size=21, 
@@ -1787,11 +1813,11 @@ def update_dashboard(selected_year):
 
     ab_pie_fig = px.pie(
         df_ab_counts, 
-        names="Abs Exercise", 
+        names="Exercise", 
         values='Count'
     ).update_layout(
         title=dict(
-            text=f'Abs Exercise Distribution - {selected_year}',
+            text=f'Ab Exercise Distribution - {selected_year}',
             x=0.5, 
             font=dict(
                 size=21,
@@ -1810,17 +1836,18 @@ def update_dashboard(selected_year):
         hovertemplate='<b>%{label}</b>: %{value}<extra></extra>'
     )
     
+    df_calisthenics = df_long[df_long['Category'] == 'Calisthenics'].reset_index(drop=True)
     calisthenics_days = df_calisthenics['Date'].nunique() if not df_calisthenics.empty else 0
-    calisthenics_fig = make_line_chart(df_calisthenics, f'Calisthenics Progress Over Time - {selected_year}', "Calisthenics Exercise")
+    calisthenics_fig = make_line_chart(df_calisthenics, f'Calisthenics Progress Over Time - {selected_year}')
 
-    df_calisthenics_counts = df_calisthenics['Calisthenics Exercise'].value_counts().reset_index()
-    df_calisthenics_counts.columns = ['Calisthenics Exercise', 'Count']
+    df_calisthenics_counts = df_calisthenics['Exercise'].value_counts().reset_index()
+    df_calisthenics_counts.columns = ['Exercise', 'Count']
 
     calisthenics_bar_fig = px.bar(
         df_calisthenics_counts, 
-        y="Calisthenics Exercise", 
+        y="Exercise", 
         x='Count', 
-        color="Calisthenics Exercise", 
+        color="Exercise", 
         text='Count', 
         orientation='h'
     ).update_layout(
@@ -1862,7 +1889,7 @@ def update_dashboard(selected_year):
 
     calisthenics_pie_fig = px.pie(
         df_calisthenics_counts, 
-        names="Calisthenics Exercise", 
+        names="Exercise", 
         values='Count'
     ).update_layout(
         title=dict(
@@ -1885,94 +1912,23 @@ def update_dashboard(selected_year):
         hovertemplate='<b>%{label}</b>: %{value}<extra></extra>'
     )
     
+    df_forearm = df_long[df_long['Category'] == 'Forearm'].reset_index(drop=True)
     forearm_days = df_forearm['Date'].nunique() if not df_forearm.empty else 0
-    forearm_fig = make_line_chart(df_forearm, f'Forearm Progress Over Time - {selected_year}', "Forearm Exercise")
+    forearm_fig = make_line_chart(df_forearm, f'Forearm Progress Over Time - {selected_year}')
 
-    df_forearm_counts = df_forearm['Forearm Exercise'].value_counts().reset_index()
-    df_forearm_counts.columns = ['Forearm Exercise', 'Count']
+    df_forearm_counts = df_forearm['Exercise'].value_counts().reset_index()
+    df_forearm_counts.columns = ['Exercise', 'Count']
 
     forearm_bar_fig = px.bar(
-        df_forearm_counts,
-        y="Forearm Exercise",
-        x='Count',
-        color="Forearm Exercise",
-        text='Count',
-        orientation='h'
-    ).update_layout(
-        title=dict(
-            text=f'Forearm Exercise Bar Chart - {selected_year}',
-            x=0.5,
-            font=dict(
-                size=21,
-                family='Calibri',
-                color='black'
-            )
-        ),
-        font=dict(
-            family='Calibri',
-            size=16,
-            color='black'
-        ),
-        yaxis=dict(
-            tickfont=dict(size=16),
-            title=dict(
-                text="Forearm Exercise",
-                font=dict(size=16)
-            )
-        ),
-        xaxis=dict(
-            title=dict(
-                text='Count',
-                font=dict(size=16)
-            )
-        ),
-        legend=dict(visible=False),
-        hovermode='closest',
-        bargap=0.08,
-        bargroupgap=0
-    ).update_traces(
-        textposition='auto',
-        hovertemplate='<b>Forearm Exercise:</b> %{y}<br><b>Count</b>: %{x}<extra></extra>'
-    )
-
-    forearm_pie_fig = px.pie(
-        df_forearm_counts,
-        names="Forearm Exercise",
-        values='Count'
-    ).update_layout(
-        title=dict(
-            text=f'Forearm Exercise Distribution - {selected_year}',
-            x=0.5,
-            font=dict(
-                size=21,
-                family='Calibri',
-                color='black'
-            )
-        ),
-        font=dict(
-            family='Calibri',
-            size=16,
-            color='black'
-        )
-    ).update_traces(
-        rotation=100,
-        texttemplate='%{percent:.1%}',
-        hovertemplate='<b>Forearm Exercise:</b> %{label}<br><b>Count</b>: %{value}<extra></extra>'
-    )
-
-    df_bicep_counts = df_bicep['Bicep Exercise'].value_counts().reset_index()
-    df_bicep_counts.columns = ['Bicep Exercise', 'Count']
-
-    bicep_bar_fig = px.bar(
-        df_bicep_counts, 
-        y="Bicep Exercise", 
+        df_forearm_counts, 
+        y="Exercise", 
         x='Count', 
-        color="Bicep Exercise", 
+        color="Exercise", 
         text='Count', 
         orientation='h'
     ).update_layout(
         title=dict(
-            text=f'Bicep Exercise Bar Chart - {selected_year}', 
+            text=f'Forearm Exercise Bar Chart - {selected_year}', 
             x=0.5, 
             font=dict(
                 size=21, 
@@ -1988,7 +1944,7 @@ def update_dashboard(selected_year):
         yaxis=dict(
             tickfont=dict(size=16), 
             title=dict(
-                text="Bicep Exercise", 
+                text="Exercise", 
                 font=dict(size=16)
             )
         ), 
@@ -2004,16 +1960,16 @@ def update_dashboard(selected_year):
         bargroupgap=0
     ).update_traces(
         textposition='auto', 
-        hovertemplate='<b>Bicep Exercise:</b> %{y}<br><b>Count</b>: %{x}<extra></extra>'
+        hovertemplate='<b>Exercise:</b> %{label}<br><b>Count</b>: %{x}<extra></extra>'
     )
 
-    bicep_pie_fig = px.pie(
-        df_bicep_counts, 
-        names="Bicep Exercise", 
+    forearm_pie_fig = px.pie(
+        df_forearm_counts, 
+        names="Exercise", 
         values='Count'
     ).update_layout(
         title=dict(
-            text=f'Bicep Exercise Distribution - {selected_year}',
+            text=f'Forearm Exercise Distribution - {selected_year}',
             x=0.5, 
             font=dict(
                 size=21,
@@ -2029,28 +1985,21 @@ def update_dashboard(selected_year):
     ).update_traces(
         rotation=100, 
         texttemplate='%{percent:.1%}', 
-        hovertemplate='<b>Bicep Exercise:</b> %{label}<br><b>Count</b>: %{value}<extra></extra>'
+        hovertemplate='<b>%{label}</b>: %{value}<extra></extra>'
     )
     
+    df_cardio = df_long[df_long['Category'] == 'Cardio'].reset_index(drop=True)
     cardio_days = df_cardio['Date'].nunique() if not df_cardio.empty else 0
-    # Cardio line chart: plot each exercise with its correct metric
-    import plotly.graph_objects as go
-    cardio_metric_map = {
-        'Bike': ('Distance', 'Miles'),
-        'Indoor Run': ('Distance', 'Miles'),
-        'Outdoor Run': ('Distance', 'Miles'),
-        'Stair Master': ('Floors', 'Floors')
-    }
-    cardio_fig = make_line_chart(df_cardio, f'Cardio Progress Over Time - {selected_year}', 'Cardio Exercise')
+    cardio_fig = make_line_chart(df_cardio, f'Cardio Progress Over Time - {selected_year}')
 
-    df_cardio_counts = df_cardio['Cardio Exercise'].value_counts().reset_index()
-    df_cardio_counts.columns = ['Cardio Exercise', 'Count']
+    df_cardio_counts = df_cardio['Exercise'].value_counts().reset_index()
+    df_cardio_counts.columns = ['Exercise', 'Count']
 
     cardio_bar_fig = px.bar(
         df_cardio_counts, 
-        y="Cardio Exercise", 
+        y="Exercise", 
         x='Count', 
-        color="Cardio Exercise", 
+        color="Exercise", 
         text='Count', 
         orientation='h'
     ).update_layout(
@@ -2092,7 +2041,7 @@ def update_dashboard(selected_year):
 
     cardio_pie_fig = px.pie(
         df_cardio_counts, 
-        names="Cardio Exercise", 
+        names="Exercise", 
         values='Count'
     ).update_layout(
         title=dict(
@@ -2116,9 +2065,9 @@ def update_dashboard(selected_year):
     )
     
     # Prepare table data
-    df_indexed = df.reset_index(drop=True).copy()
-    # column_order = ['Date', 'Category', 'Exercise', 'Weight']
-    # df_indexed = df_indexed[column_order]
+    df_indexed = df_long.reset_index(drop=True).copy()
+    column_order = ['Date', 'Category', 'Exercise', 'Weight']
+    df_indexed = df_indexed[column_order]
     df_indexed.insert(0, '#', df_indexed.index + 1)
     
     table_data = df_indexed.to_dict('records')
@@ -2250,3 +2199,56 @@ if __name__ == '__main__':
 #             print(f"Could not save {year}: {e}")
 
 # print(f"Saved all data to {data_path}")
+
+# ----------------------------------------- KILL PORT ----------------------------------------
+
+# netstat -ano | findstr :8050
+# taskkill /PID 24772 /F
+# npx kill-port 8050
+
+# ---------------------------------------- Host Application -----------------------------
+
+# 1. pip freeze > requirements.txt
+# 2. add this to procfile: 'web: gunicorn impact_11_2024:server'
+# 3. heroku login
+# 4. heroku create
+# 5. git push heroku main
+
+# Create venv 
+# virtualenv venv 
+# source venv/bin/activate # uses the virtualenv
+
+# Update PIP Setup Tools:
+# pip install --upgrade pip setuptools
+
+# Install all dependencies in the requirements file:
+# pip install -r requirements.txt
+
+# Check dependency tree:
+# pipdeptree
+# pip show package-name
+
+# Remove
+# pypiwin32
+# pywin32
+# jupytercore
+
+# ----------------------------------------------------
+
+# Name must start with a letter, end with a letter or digit and can only contain lowercase letters, digits, and dashes.
+
+# Heroku Setup:
+# heroku login
+# heroku create admin-jun-25
+# heroku git:remote -a admin-jun-25
+# git push heroku main
+
+# Clear Heroku Cache:
+# heroku plugins:install heroku-repo
+# heroku repo:purge_cache -a mc-impact-11-2024
+
+# Set buildpack for heroku
+# heroku buildpacks:set heroku/python
+
+# Get encoded key:
+# base64 service_account_file.json
