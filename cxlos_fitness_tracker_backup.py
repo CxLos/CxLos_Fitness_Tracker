@@ -1,24 +1,21 @@
 
 # =================================== IMPORTS ================================= #
 
-import numpy as np 
 import pandas as pd 
 import plotly.express as px
 import plotly.graph_objects as go
-import seaborn as sns 
 from datetime import datetime
 import os
-import sys
+# import sys
 # -------------------------------
-import requests
+# import requests
 import json
 import base64
 import gspread
 from google.oauth2.service_account import Credentials
 # --------------------------------
-import dash
-from dash import dcc, html, Input, Output, State, dash_table
-from dash.development.base_component import Component
+from dash import dash, dcc, html, Input, Output, dash_table
+# from dash.development.base_component import Component
 
 # 'data/~$bmhc_data_2024_cleaned.xlsx'
 # print('System Version:', sys.version)
@@ -35,7 +32,7 @@ report_year = datetime(2026, 1, 1).strftime("%Y")
 name = "CxLos"
 
 # Define the Google Sheets URL
-# sheet_url = "https://docs.google.com/spreadsheets/d/1EXDabqzS1Gd1AteSqcovvUuJxrUMQvisf_MhnhFMeNk/edit?gid=0#gid=0"
+# sheet_url = 
 sheet_url = "https://docs.google.com/spreadsheets/d/1X5ZQo9OmAwQFsiBaxRoH8-L3kGrjDt20Em7W3NYb2qI/edit?resourcekey=&gid=1791797530#gid=1791797530"
 
 # Define the scope
