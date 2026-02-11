@@ -611,6 +611,7 @@ div[data-value]:hover {
     gap: 2vh;
   }
   .graph-row,
+  .graph-row-1,
   .rollup-row,
   .data-box {
     flex-direction: column;
@@ -646,8 +647,32 @@ div[data-value]:hover {
   .wide-box{
     flex-direction: column;
     width: 100%;
-    height: 45vh;
+    height: 75vh;
     width: 85%;
+  }
+  .wide-graph .js-plotly-plot .legend {
+    display: none !important;
+  }
+  .wide-graph .js-plotly-plot .yaxislayer-above {
+    display: none !important;
+  }
+  .wide-graph .js-plotly-plot .xaxislayer-above {
+    display: none !important;
+  }
+  .graph .js-plotly-plot .legend {
+    display: none !important;
+  }
+  .graph .js-plotly-plot .yaxislayer-above {
+    display: none !important;
+  }
+  .graph .js-plotly-plot .xaxislayer-above {
+    display: none !important;
+  }
+  .wide-graph .legend{
+    display: none;
+  }
+  .graph .legend{
+    display: none;
   }
    #applications-table {
     width: 95%;
@@ -708,29 +733,6 @@ div[data-value]:hover {
     stroke: none !important;
     opacity: 0 !important;
   }
-
-  /* .js-plotly-plot .textlayer text,
-  .js-plotly-plot .infolayer text,
-  .js-plotly-plot .textpoint text {
-    font-size: 10px !important;
-    line-height: 1 !important;
-  } */
-
-  /* .js-plotly-plot .pie .textlayer text,
-  .js-plotly-plot .pie .infolayer text,
-  .js-plotly-plot .pie .slice text,
-  .js-plotly-plot .pie .textpoint text,
-  .js-plotly-plot .pie .lines,
-  .js-plotly-plot .pie .connector,
-  .js-plotly-plot .pie .pull,
-  .js-plotly-plot .pie .lines path,
-  .js-plotly-plot .pie .connector path,
-  .js-plotly-plot .pie .pull path {
-    font-size: 10px !important;
-    display: none !important;
-    stroke: none !important;
-    opacity: 0 !important;
-  } */
 
   /* annotations, hover labels, and legend text */
   .js-plotly-plot .annotation text,
